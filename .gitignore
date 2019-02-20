@@ -1,0 +1,9 @@
+dist/
+node_modules/
+target/
+test/node_modules
+test/dist
+_old files
+
+
+.hc
