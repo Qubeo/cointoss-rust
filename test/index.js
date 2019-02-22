@@ -85,25 +85,13 @@ scenario.runTape('Initiate a toss by calling request_toss()', async (t, {alice})
 
 scenario.runTape('Agent A/ Send the seed hash through N3H', async (t, {alice, bob}) => {
 
-  // let request_message_json = JSON.stringify("{message_type: RequestMsg, seed_hash: " + g_seed_hash_a.toString() + " }");    // ISSUE: This works to bypass the JSON.parse error in holochain-nodejs
-  // let request_message = "{message_type: RequestMsg, seed_hash: " + g_seed_hash_a.toString() + " }";    // ISSUE: This works to bypass the JSON.parse error in holochain-nodejs
   const init_message = { agent_to: g_address_bob, seed_hash: g_seed_hash_a};
-
-  // let request_message = { agent_from: g_address_alice, seed_hash: g_seed_hash_a.toString() };
-  // request_message = JSON.stringify(request_message);                        // Q: Still not sure, whether needed.
-  // const init_message = { agent_to: g_address_B, message: request_message };
-  // const result_seedhash = container.callRaw("prdelA::./dist/bundle.json", "cointoss", "main", "send_message", JSON.stringify(init_message));
-  // const result_seedhash = await alice.callSync('cointoss', 'send_message', JSON.stringify(init_message));
-
   const result_seedhash = await alice.callSync('cointoss', 'send_request', init_message);
 
   console.log("JS/ result_seedhash B (???): ");
   console.log(result_seedhash.Ok);
-
-  // console.log("Stringified init_message: " + JSON.stringify(init_message));
-   
-
-
+  
+  g_seed_hash_b = result.seedhash.Ok;
 });
 
 /*
