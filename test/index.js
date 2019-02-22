@@ -20,8 +20,8 @@ const scenario = new Scenario([instanceAlice, instanceBob]);
 
 /*----------  Events  ----------*/
 
-var g_address_A;
-var g_address_B;
+var g_address_alice;
+var g_address_bob;
   
 var handle_address_a;
 var handle_address_b;
@@ -31,6 +31,7 @@ var g_seed_hash_b;
 var g_received_toss;
 
 // Q: How to get the agent address?
+
 
 // Q: How and where exactly are the "{alice, bob}" related to my configurations? Matched to the strings?
 scenario.runTape('Can get address of both players', async (t, {alice, bob}) => {
@@ -45,6 +46,9 @@ scenario.runTape('Can get address of both players', async (t, {alice, bob}) => {
   // Q: Why?? 2x46, but why?
   t.deepEqual(result_alice.Ok.length, 92);
   t.deepEqual(result_bob.Ok.length, 92);
+
+  g_address_alice = result_alice.Ok;
+  g_address_bob = result_bob.Ok;
 });
 
 
@@ -54,42 +58,55 @@ scenario.runTape('Call the set_handle() function, expect entry address as a resu
   const handle_bob   = { handle: name_bob };
   const result_alice = await alice.callSync('cointoss', 'set_handle', handle_alice);
   const result_bob = await bob.callSync('cointoss', 'set_handle', handle_bob);
-  
+
   console.log("JS/ set_handle() result:" + result_alice.Ok);
   console.log("JS/ set_handle() result:" + result_bob.Ok);
 
   t.deepEqual(result_alice.Ok.length, 46);
   t.deepEqual(result_bob.Ok.length, 46);
+
+  // g_address_alice = result_alice.Ok;
+  // g_address_bob = result_bob.Ok;
+
+});
+
+// ISSUE: I don't know why it works now. Just commented out a section?! Non-deterministic?
+scenario.runTape('Initiate a toss by calling request_toss()', async (t, {alice}) => {
+
+  const request = { agent_to: g_address_bob, seed: 12 };
+  const result_request = await alice.callSync('cointoss', 'request_toss', request);
+  console.log("JS/ result_request:")
+  console.log(result_request);
+
+  t.deepEqual(result_request.Ok.length, 46);
+  g_seed_hash_a = result_request.Ok;
+});
+
+
+scenario.runTape('Agent A/ Send the seed hash through N3H', async (t, {alice, bob}) => {
+
+  // let request_message_json = JSON.stringify("{message_type: RequestMsg, seed_hash: " + g_seed_hash_a.toString() + " }");    // ISSUE: This works to bypass the JSON.parse error in holochain-nodejs
+  // let request_message = "{message_type: RequestMsg, seed_hash: " + g_seed_hash_a.toString() + " }";    // ISSUE: This works to bypass the JSON.parse error in holochain-nodejs
+  const init_message = { agent_to: g_address_bob, seed_hash: g_seed_hash_a};
+
+  // let request_message = { agent_from: g_address_alice, seed_hash: g_seed_hash_a.toString() };
+  // request_message = JSON.stringify(request_message);                        // Q: Still not sure, whether needed.
+  // const init_message = { agent_to: g_address_B, message: request_message };
+  // const result_seedhash = container.callRaw("prdelA::./dist/bundle.json", "cointoss", "main", "send_message", JSON.stringify(init_message));
+  // const result_seedhash = await alice.callSync('cointoss', 'send_message', JSON.stringify(init_message));
+
+  const result_seedhash = await alice.callSync('cointoss', 'send_request', init_message);
+
+  console.log("JS/ result_seedhash B (???): ");
+  console.log(result_seedhash.Ok);
+
+  // console.log("Stringified init_message: " + JSON.stringify(init_message));
+   
+
+
 });
 
 /*
-test('', (t) => {
-
-  const result_a = player_A.call("cointoss", "main", "set_handle", { handle: name_player_A });
-  const result_b = player_B.call("cointoss", "main", "set_handle", { handle: name_player_B });
-
-  console.log("JS/ set_handle() result: ");
-  console.log(result_a, result_b);
-
-  handle_address_a = result_a.Ok;
-  handle_address_b = result_b.Ok;
-
-  // t.equal(result);
-  t.end();
-});
-
-test('Initiate a toss by calling request_toss()', (t) => {
-  
-  console.log("JS/ Agent key: ")
-  console.log(handle_address_a);
-
-  const result_request = player_A.call("cointoss", "main", "request_toss", { agent_key: handle_address_b.address, seed: 12 });
-  console.log(result_request);
-
-  g_seed_hash_a = result_request.Ok;
-  t.end();
-});
-
 test('Agent A/ Send the seed hash through N3H', (t) => {
 
   // let msg_json = JSON.stringify("{toss_request: prdel}");    // ISSUE: This works to bypass the JSON.parse error in holochain-nodejs
