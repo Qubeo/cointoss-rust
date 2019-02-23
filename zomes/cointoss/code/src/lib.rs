@@ -37,6 +37,7 @@ use crate::entries::{CTEntryType, TossSchema, TossResultSchema, SeedSchema, Addr
 
 #[derive(Serialize, Deserialize, Debug, DefaultJson, Clone)]
 enum MsgType {
+    WannaPlay,
     RequestToss
 }
 
@@ -54,29 +55,12 @@ struct GeneralMsg {
     message: String
 }
 
-/*    agent_to: Address,
-    seed_hash: HashString
-}*/
-
-// TODO: Replace with the hdk implementation, when finished.
-// static AGENT_ADDRESS: &str = "QmWLKuaVVLpHbCLiHuwjpuZaGpY3436HWkKKaqAmz2Axxh";
-
 // -------------------------------------- TOSS FUNCTIONS ------------------------------------------
-// var me = App.Key.Hash ?? // Q: Where does this belong? And what type is it? HashString?
 
 pub fn handle_get_my_address() -> ZomeApiResult<Address> {
   
-    // AGENT_ADDRESS.clone().into();
     hdk::debug("HCH/ handle_get_my_address()");
-
-    // TODO: Not fully implemented AGENT_ADDRESS in the current HDK release yet.
-    // Temporary workaround idea: use a random hash? Or hash agent key? Where do I get it? 
-    // TODO: VERY temporary - just returning a hard-coded HashString now.   
-
-    // Ok(JsonString::from(Address::from(AGENT_ADDRESS.to_string())))
-    // Ok(AGENT_ADDRESS.clone().into());    // Q: Difference from the above?
     Ok(AGENT_ADDRESS.to_string().into())
-    //return json!(AGENT_ADDRESS).into();
 }
 
 /*
@@ -173,19 +157,18 @@ pub fn handle_request_toss(agent_to: Address, seed: u8) -> ZomeApiResult<HashStr
     seed_entry
 }
 
+fn generate_seed(salt: String) -> SeedSchema {
+    SeedSchema {
+        salt: salt,
+        seed_value: 5                   // TODO: Randomize or whatever, this is a temporary hardcode hack.
+    }
+}
+
 pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
 
     // TODO: Send notification, get the data from the UI.
-
-    let my_seed = SeedSchema {
-        salt: "pr".to_string(), //rand::thread_rng().gen_range(0, 10).to_string(),
-        seed_value: 5 // rand::thread_rng().gen_range(0, 10)
-     };
-    
+    let my_seed = generate_seed("saltpr".to_string());    
     let my_seed_hash = handle_commit_seed(my_seed).unwrap();        // Q: Better use HashString or Address? (Idiomatic Holochain :) )
-
-    // TODO: Either deserialize an "Address" wrapper struct, or create a macro? Or use a slicing hack?
-    // Q: Best choice from the development best practices perspective?
 
     hdk::debug("handle_receive_request() seed_address:");
     hdk::debug(my_seed_hash.clone());
@@ -195,13 +178,13 @@ pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
         initiator_seed_hash: request.seed_hash.clone(),
         responder: Address::from(AGENT_ADDRESS.to_string()), // Q: Why can't just use the AGENT_ADDRESS?
         responder_seed_hash: my_seed_hash, // HashString::from(&seed_address[12..58]), // TODO: What a dirty trick. BUG?: Shoots down zome function call when e.g. [14..3]. Should?
-        call: true
+        call: 1
     };
 
     hdk::debug("handle_receive_request() toss.responder_seed_hash: ");
     hdk::debug(toss.clone().responder_seed_hash);
         
-    let toss_entry = commit_toss(toss.clone());
+    let toss_entry = handle_commit_toss(toss.clone());
 
     hdk::debug("handle_receive_request() toss_entry:");
     hdk::debug(toss_entry.clone().unwrap());
@@ -275,15 +258,23 @@ fn handle_commit_seed(seed: SeedSchema) -> ZomeApiResult<Address> {
       //  },
       //  Err(hdk_err) => Err(hdk_err)
     //};
-
-    // Ok(seed_address)
 }
 
 fn confirm_seed() -> ZomeApiResult<JsonString> {
     Ok(HashString::new().into())
 }
 
-fn commit_toss(toss: TossSchema) -> ZomeApiResult<Address> {
+pub fn handle_commit_toss(toss: TossSchema) -> ZomeApiResult<Address> {
+
+    // TODO: Validate it the toss has the right format etc.?
+    // Consider tying it with the validation logic somehow?
+
+    let toss_entry = Entry::App("toss".into(), toss.into());
+    let toss_address_result = hdk::commit_entry(&toss_entry);
+    toss_address_result
+}
+
+fn _commit_toss(toss: TossSchema) -> ZomeApiResult<Address> {
 
     let toss_entry = Entry::App("toss".into(), toss.into());
     let toss_address_result = hdk::commit_entry(&toss_entry); // {
@@ -299,8 +290,6 @@ fn commit_toss(toss: TossSchema) -> ZomeApiResult<Address> {
     // hdk::debug(toss_address_result.clone().unwrap().to_string());
 
     toss_address_result
-    //toss_address_resul
-    //Ok(toss_address.into())
 }
 
 fn generate_salt() -> ZomeApiResult<JsonString> {
@@ -319,7 +308,7 @@ fn handle_send_request(agent_to: Address, seed_hash: HashString) -> ZomeApiResul
     // Q: Is this the right way? Or use JsonString by default?
     // ISSUE: When I use string, I get JSON.serialize error (prolly in the JS). Good? Bad?
     // ISSUE: "agent_from" can be spoofed. Is this fixed yet?
-    hdk::send(agent_to, json!(send_msg).to_string(), 5000.into())
+    hdk::send(agent_to, json!(send_msg).to_string(), 10000.into())
 
     //let result_unwrapped = &result.unwrap();       // Q: How to clone or debug output of ZomeApiResult ?? -> Issue? 
     //hdk::debug(result.unwrap().clone());        // Q: How to work with unwrapping and cloning without violating the move?
@@ -346,7 +335,7 @@ fn process_received_message(payload: String) -> ZomeApiResult<String> {
             MsgType::RequestToss => {
                 let request_msg = process_request(msg.message);
                 // TODO: Error handling.
-                Ok(handle_receive_request(request_msg).unwrap().to_string())
+                Ok(json!(handle_receive_request(request_msg).unwrap()).to_string())
             },
             _ => Ok("process_received_message(): [other message type received]".to_string())
         }
@@ -526,7 +515,13 @@ define_zome! {
                 inputs: |message: String|,
                 outputs: |result: String|,
                 handler: handle_test_fn
-            }           
+            }
+            // Just for testing purposes - can stay private.
+            commit_toss: {
+                inputs: |toss: TossSchema|,
+                outputs: |result: ZomeApiResult<Address>|,
+                handler: handle_commit_toss
+            }                       
     ]
     
     traits: {
@@ -542,6 +537,7 @@ define_zome! {
             confirm_toss,
             get_toss_history,
             commit_seed,
+            commit_toss,
             send_request,
             test_fn
         ]

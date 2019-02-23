@@ -60,7 +60,7 @@ pub struct TossSchema {
     pub initiator_seed_hash: HashString,
     pub responder: Address,
     pub responder_seed_hash: HashString,
-    pub call: bool
+    pub call: u8
     // pub required: ["initiator", "initiator_seed_hash", "responder", "responder_seed_hash"]; // Q: How to initialize the field?
 }
 

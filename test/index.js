@@ -12,6 +12,7 @@ const agentBob   = Config.agent(name_bob);
 const instanceAlice = Config.instance(agentAlice, dna);
 const instanceBob   = Config.instance(agentBob, dna);
 
+
 const scenario = new Scenario([instanceAlice, instanceBob]);
 
 // test.createStream()
@@ -28,6 +29,8 @@ var handle_address_b;
 
 var g_seed_hash_a;
 var g_seed_hash_b;
+var g_toss_hash_a;
+var g_toss_hash_b;
 var g_received_toss;
 
 // Q: How to get the agent address?
@@ -82,20 +85,47 @@ scenario.runTape('Initiate a toss by calling request_toss()', async (t, {alice})
   g_seed_hash_a = result_request.Ok;
 });
 
-
+// Q: Spinning up new instances for each scenario might break the addressess -> into one scenario?
 scenario.runTape('Agent A/ Send the seed hash through N3H', async (t, {alice, bob}) => {
 
   const init_message = { agent_to: g_address_bob, seed_hash: g_seed_hash_a};
   const result_seedhash = await alice.callSync('cointoss', 'send_request', init_message);
 
-  console.log("JS/ result_seedhash B (???): ");
-  console.log(result_seedhash.Ok);
+  console.log("JS/ result_seedhash B: ");
+  console.log(result_seedhash);   // Q: .Ok doesn't work. Why? Need to deserialize into JSON here? Why?
   
-  g_seed_hash_b = result.seedhash.Ok;
+  t.deepEqual(result_seedhash.Ok.length, 46);
+  g_seed_hash_b = result_seedhash.Ok;
 });
 
-/*
-test('Agent A/ Send the seed hash through N3H', (t) => {
+// Receive the hashed entry. Create the TossRequest and commit it.
+// Send the hash for that.
+// Let B do the same.
+
+scenario.runTape('Agent B/ Commit toss', async (t, {alice, bob}) => {
+
+  // Q: How and where should the orchestration happen? Now orchestrated by the "test" entity more or less. -> Distributed?
+  // Q: Where should the toss construction logic happen? In HCH or in JS?
+  // Q: Shouldn't it be included in the validation logic somehow? What might be the attack vectors here?
+  
+  const toss_struct = {
+    initiator: g_address_alice,
+    initiator_seed_hash: g_seed_hash_a,
+    responder: g_address_bob,
+    responder_seed_hash: g_seed_hash_b,
+    call: 1
+  };
+
+  const result_toss = await bob.callSync('cointoss', 'commit_toss', { toss: toss_struct });
+
+  console.log("JS/ result_toss: ");
+  console.log(result_toss);
+  
+  t.deepEqual(result_toss.Ok.length, 46);
+  g_toss_hash_b = result_toss.Ok;
+});
+
+/* test('Agent A/ Send the seed hash through N3H and receive the hash of the commited seed', (t) => {
 
   // let msg_json = JSON.stringify("{toss_request: prdel}");    // ISSUE: This works to bypass the JSON.parse error in holochain-nodejs
   // const init_message = { to_agent: g_address_B, message: msg_json};
@@ -119,7 +149,9 @@ test('Agent A/ Send the seed hash through N3H', (t) => {
   console.log(result_seedhash);
   t.end();
 });
+*/
 
+/*
 test('Agent A/ Commit a seed and return the entry address', (t) => {
 
   // Q: Where should the "salt" be generated? UI? App instance? How much freedom for the agent? Visibility?

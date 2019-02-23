@@ -1,0 +1,21 @@
+{
+    "name": "cointoss-rust",
+    "version": "0.2.0",
+    "description": "Demonstration of the coin flip pattern between 2 agents.",
+    "main": "index.js",
+    "scripts": {
+      "hc:build": "mkdir -p dna && cd dna-src && hc package --strip-meta -o ../dna/events-goer-4000.hcpkg",
+      "hc:start": "holochain -c ./conductor-config.toml"
+    },
+    "authors": [
+        {
+          "identifier": "Jakub Lanc <jakub.lanc@gmail.com>",
+          "public_key_source": "",
+          "signature": ""
+        }
+    ],
+    "license": "GPL-3",
+    "dependencies": {
+      "@holochain/holochain-nodejs": "^0.4.2-alpha"
+    }
+}
