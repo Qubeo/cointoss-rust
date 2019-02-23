@@ -1,4 +1,8 @@
 **TODO**
+Break the code down to files (messaging, etc.)
+Implement links
+    Describe how the link need emerged from the question: "How to persist my seed structure?"
+Document everything dilligently
 
 **Implementation ideas**
 When agent B receives the toss request, he could get notified (how?) and prompted to play his move.
