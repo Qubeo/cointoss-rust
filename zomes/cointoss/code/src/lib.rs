@@ -77,20 +77,21 @@ fn process_received_message(payload: String) -> ZomeApiResult<String> {
         
        let msg: GeneralMsg = serde_json::from_str(&payload).unwrap();
 
-        // Parse the message type and choose the appropriate response
+        // Parse the message type and choose the appropriate response--------------------------
         match msg.message_type {
-            // Toss request received
+            // Toss request received -------------------------------------------------------
             MsgType::RequestToss => {
                 let request_msg = process_request(msg.message);
                 let receive_request_result = handle_receive_request(request_msg).unwrap();     // TODO: Fix the error handling. What exactly should this return? Should the unwrap be there?
                 Ok(json!(receive_request_result).to_string())
             },
-            // Response after the other party commited the toss
+            // Response after the other party commited the toss ----------------------------
             MsgType::TossResponse => {
-                let toss_address = process_toss_response(msg.message);
+                let toss_address = process_toss_response_msg(msg.message);
                 // handle_commit_toss()
                 Ok(json!(toss_address).to_string())
             }
+            // Other message type received -------------------------------------------------
             _ => Ok("process_received_message(): [other message type received]".to_string())
         }
 }
@@ -106,8 +107,10 @@ fn handle_send_request(agent_to: Address, seed_hash: HashString) -> ZomeApiResul
     // Q: Is this the right way? Or use JsonString by default?
     // ISSUE: When I use string, I get JSON.serialize error (prolly in the JS). Good? Bad?
     // ISSUE: "agent_from" can be spoofed. Is this fixed yet?    
-    hdk::send(agent_to, json!(send_msg).to_string(), 10000.into())
+    hdk::send(agent_to, json!(send_msg).to_string(), 20000.into())
 }
+
+
 
 // TODO: Add error handling.
 fn process_request(request: String) -> RequestMsg {
@@ -115,24 +118,25 @@ fn process_request(request: String) -> RequestMsg {
     request_msg
 }
 
-
-// TODO: This prolly should be (connected to) confirm seed.
+/*// TODO: This prolly should be (connected to) confirm seed.
 fn generate_seed_hash(seed: SeedSchema) -> ZomeApiResult<HashString> {
     let seed_hash = HashString::encode_from_str(&"prdel".to_string(), Hash::SHA2256);    // !!! TODO: Use real HCH hashing. This temporary hardcoded nonsense.
     Ok(seed_hash)
     // TODO: Hash it, or just commit it and get the hash in one step?
     // Q: Beware some unhealthy coupling / tangling? (i.e. "process_" function shouldn't commit entries I'd say.)
-}
+}*/
 
 // @ ----------------------------------------------------------------------------------------------
 // @ Processing of the initiation request
 // @
-fn process_toss_response(message: String) -> ZomeApiResult<Address> {
+fn process_toss_response_msg(message: String) -> ZomeApiResult<Address> {
+
+    hdk::debug("process_toss_response_msg()");
     let toss_response: TossResponseMsg = serde_json::from_str(&message).unwrap();
 
     // Q: Do I need to do this, or can I just use received hash? Would defy the purpose tho, right?
     //let initiator: Address = ???; // TODO: get agent_from somehow. How?
-    let seed_hash = generate_seed_hash(toss_response.responder_seed).unwrap();
+    let seed_hash = get_seed_hash(toss_response.responder_seed.clone()).unwrap();
 
     // TODO: Confirm / validate seed hash here? Or just store and then - so everyone can see, can't be refuted, if subterfuge?
 
@@ -147,8 +151,19 @@ fn process_toss_response(message: String) -> ZomeApiResult<Address> {
 
     let toss_result = handle_commit_toss(toss.clone());
     
+    // TODO confirm seed, confirm toss, unify the return results. Now bool / JsonString.
+    /* let (seed_confirmed, toss_confirmed) = (
+        confirm_seed(toss_response.responder_seed.clone(), seed_hash.clone()),
+        handle_confirm_toss(toss.clone(), toss_response.toss_hash.clone())
+    );*/
+   let seed_confirmed = confirm_seed(toss_response.responder_seed.clone(), seed_hash.clone());
+    
+    // TODO reveal seed
+    
     toss_result    
 }
+
+
 
 // -------------------------------------- TOSS FUNCTIONS ------------------------------------------
 
@@ -264,9 +279,13 @@ fn generate_seed(salt: String) -> SeedSchema {
 pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
 
     // TODO: Send notification, get the data from the UI.
-    // generate_seed -> generate_toss -> commit_toss -> send_response 
+    // A: send_request
+    // B: generate_seed -> generate_toss -> commit_toss -> send_response
+    // A: handle_response -> commit_toss -> validate_seed -> validate_toss -> send_result
+    // B: receive_result -> validate_result -> announce_result
 
     // Commit seed
+    hdk::debug("handle_receive_request(): commiting seed");
     let my_seed = generate_seed("saltpr".to_string());    
     let my_seed_hash = handle_commit_seed(my_seed.clone()).unwrap();        // Q: Better use HashString or Address? (Idiomatic Holochain :) )
 
@@ -278,13 +297,13 @@ pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
         call: 1
     };
 
-    hdk::debug("handle_receive_request() toss initiator: ");
+    hdk::debug("handle_receive_request(): toss initiator: ");
     hdk::debug(toss.initiator.clone().to_string());
     
     // Commit toss
     let toss_entry = handle_commit_toss(toss.clone());
 
-    hdk::debug("handle_receive_request() toss_entry:");
+    hdk::debug("handle_receive_request(): toss_entry:");
     hdk::debug(toss_entry.clone().unwrap());
 
     // Send call / response triplet - responder_seed, toss_hash, call
@@ -299,21 +318,27 @@ pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
 
     let send_result = send_response(toss.initiator.clone(), response_msg);
     
-    hdk::debug("handle_receive_request() send_response result: ");
-    hdk::debug(send_result);
+    hdk::debug("handle_receive_request(): send_response result: ");
+    hdk::debug(send_result.unwrap());        // Q: Receiving {Ok: {Ok: ___}} construction. How come? Wrapping?
+
+    // Q: What now?
 
     toss_entry
 }
 
 fn send_response(agent_to: Address, response_msg: TossResponseMsg) -> ZomeApiResult<String> {
 
+    hdk::debug("send_response(): ");
+    
     let wrapped_msg = GeneralMsg {
         agent_from: AGENT_ADDRESS.to_string().into(),
         message_type: MsgType::TossResponse,
         message: json!(response_msg).to_string()
     };
 
-    hdk::send(agent_to, json!(wrapped_msg).to_string(), 10000.into())
+    let response = hdk::send(agent_to, json!(wrapped_msg).to_string(), 20000.into());
+    hdk::debug(response.clone());
+    response
 }
 
 pub fn handle_get_toss_history() -> ZomeApiResult<JsonString> {
@@ -321,34 +346,6 @@ pub fn handle_get_toss_history() -> ZomeApiResult<JsonString> {
         // let prdel_hash = HashString::encode_from_str(&"haf".to_string(), Hash::SHA2256);        
         Ok(json!("haf".to_string()).into())
 }
-
-fn handle_confirm_toss(toss: TossSchema) -> ZomeApiResult<JsonString> {
-  
-    hdk::debug("handle_confirm_toss(): _toss: ");
-    hdk::debug(toss.clone());
-    
-    // TODO: The toss confirmation code here. Do the values fit?
-  
-    let toss_entry = Entry::App("toss".into(), toss.into()); // Q: my_key? &my_key? Nebo "prdel"?
-    
-    // Q: It seems having this in genesis doesn't work - throws an exception within the holochain-nodejs.
-    // TODO: Ask in Mattermost.
-
-    let toss_address: JsonString = match hdk::commit_entry(&toss_entry) {
-         
-        // Ok(address) => match hdk::link_entries(&AGENT_ADDRESS, &address, "toss") {
-            Ok(address) => json!({ "address": address }).into(),
-            Err(hdk_err) => { hdk_err.into() }
-        // },
-        // Err(hdk_err) => hdk_err.into()
-    };
-    
-    hdk::debug("handle_confirm_toss(): toss_address: ");
-    hdk::debug(toss_address.clone());
-
-    Ok(toss_address.into()) //toss_address.into();
-}
-
 
 fn handle_commit_seed(seed: SeedSchema) -> ZomeApiResult<Address> {
 
@@ -369,8 +366,48 @@ fn handle_commit_seed(seed: SeedSchema) -> ZomeApiResult<Address> {
     // };
 }
 
-fn confirm_seed() -> ZomeApiResult<JsonString> {
-    Ok(HashString::new().into())
+
+// TODO: Generalize through types - <T>
+fn get_seed_hash(seed: SeedSchema) -> ZomeApiResult<HashString> {
+    let seed_entry = Entry::App("seed".into(), seed.into());
+    let seed_hash_generated = hdk::entry_address(&seed_entry);
+    seed_hash_generated
+}
+
+fn get_toss_hash(toss: TossSchema) -> ZomeApiResult<HashString> {
+    let toss_entry = Entry::App("toss".into(), toss.into());
+    let toss_hash_generated = hdk::entry_address(&toss_entry);
+    toss_hash_generated
+}
+
+
+// TODO: Again, implement a version for general types <T>
+fn confirm_seed(seed: SeedSchema, seed_hash: HashString) -> ZomeApiResult<u8> {
+    
+    let seed_hash_generated = get_seed_hash(seed).unwrap();
+    hdk::debug("confirm_seed(): ");
+    hdk::debug(seed_hash.clone());
+    hdk::debug(seed_hash_generated.clone());
+
+    // TODO: Error handling.
+    Ok( match (seed_hash_generated == seed_hash) {
+        true => 1,
+        false => 0
+    })
+}
+
+// TODO: Won't confirm now, because I'm not storing my seed yet.
+fn handle_confirm_toss(toss: TossSchema, toss_hash: HashString) -> ZomeApiResult<JsonString> {
+    let toss_hash_generated = get_toss_hash(toss).unwrap();
+    hdk::debug("confirm_toss(): ");
+    hdk::debug(toss_hash.clone());
+    hdk::debug(toss_hash_generated.clone());
+
+    // TODO: This - horrible, very temp. (ZomeApiResult doesn't implement bool)
+    Ok( match (toss_hash_generated == toss_hash) {
+        true => json!("{ confirmed: true }").into(),
+        false => json!("{ confirmed: false }").into()
+    })
 }
 
 pub fn handle_commit_toss(toss: TossSchema) -> ZomeApiResult<Address> {
@@ -395,12 +432,10 @@ fn _commit_toss(toss: TossSchema) -> ZomeApiResult<Address> {
         // Err(hdk_err) => hdk_err.into()
     // };
 
-    // hdk::debug("commit_toss(): toss_entry: ");
-    // hdk::debug(toss_address_result.clone().unwrap().to_string());
-
     toss_address_result
 }
 
+// TODO: Generate a proper salt!
 fn generate_salt() -> ZomeApiResult<JsonString> {
     Ok(HashString::new().into())
 }
@@ -416,7 +451,7 @@ define_zome! {
         entries::toss_result_definition(),
         entries::seed_definition()
 
-        // TODO: Q: It seems I can define multiple entries of the same type / content. Isn't this a bug?
+        // ISSUE: Q: It seems I can define multiple entries of the same type / content. Isn't this a bug?
 
        /* Q: Link entries. What to do with those?npm 
         entry!(
@@ -496,7 +531,7 @@ define_zome! {
                 handler: handle_receive_request
             }
             confirm_toss: {
-				inputs: |toss: TossSchema|,
+				inputs: |toss: TossSchema, toss_hash: HashString|,
 				outputs: |result: ZomeApiResult<JsonString>|,
 				handler: handle_confirm_toss
 			}

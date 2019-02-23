@@ -9,6 +9,9 @@ Create a VSCode macro, copying any "//Q: " statements into this file as question
 
 
 **Questions**
+Questions of persistence: persisting e.g. my seed structure? So I can then hash it to the toss, when receiving the response from B?
+    Role of links?
+
 Can I get the agent address from the Conductor in JS? How? Conductor functions in the HDK?
 
 In N2N messaging, how do I, as an agent, know where does the message come from??

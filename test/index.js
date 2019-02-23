@@ -72,8 +72,6 @@ console.log("//*************** 'Call the set_handle() function, expect entry add
 //});
 
 
-
-// ISSUE: I don't know why it works now. Just commented out a section?! Non-deterministic?
 // test('Initiate a toss by calling request_toss()', async (t) => {
 // scenario.runTape('Initiate a toss by calling request_toss()', async (t, {alice}) => {
   console.log("//**************** 'Initiate a toss by calling request_toss()'");
@@ -126,7 +124,7 @@ console.log("//************************* Agent B Commit the toss");
   const result_toss = await bob.callSync('cointoss', 'commit_toss', { toss: toss_struct });
 
   console.log("JS/ result_toss: ");
-  console.log(result_toss);
+  console.log(result_toss.Ok);
   
   //t.deepEqual(result_toss.Ok.length, 46);
   g_toss_hash_b = result_toss.Ok;
