@@ -28,9 +28,18 @@ Error: "const result_seedhash = container.callRaw("prdelA::./dist/bundle.json", 
                                     ^unable to call zome function: InternalFailure(RibosomeFailed("Trap: Trap { kind: Unreachable }"))"
     Somethig killing my zome? In the process_received_message()?
 
+TODO: Propose a "formatted" hdk::debug! macro PR?
+
+
 **Learnings**
 
 
+**Notes**
+// TODO: Send notification, get the data from the UI.
+// A: send_request
+// B: generate_seed -> generate_toss -> commit_toss -> send_response
+// A: handle_response -> commit_toss -> validate_seed -> validate_toss -> send_result
+// B: receive_result -> validate_result -> announce_result
 
 
 **Resources**

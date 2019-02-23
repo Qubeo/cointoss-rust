@@ -66,8 +66,8 @@ pub struct TossResponseMsg {
     call: u8
 }
 
-// ----------------------  MESSAGE PROCESSING -----------------------------------------------------
-// N2N NETWORKING ---------------------------------------------------------------------------------
+// ----------------------  MESSAGE PROCESSING  ----------------------------------------------------
+// P2P MESSAGING- ---------------------------------------------------------------------------------
 
 
 // @ ----------------------------------------------------------------------------------------------
@@ -110,26 +110,17 @@ fn handle_send_request(agent_to: Address, seed_hash: HashString) -> ZomeApiResul
     hdk::send(agent_to, json!(send_msg).to_string(), 20000.into())
 }
 
-
-
 // TODO: Add error handling.
 fn process_request(request: String) -> RequestMsg {
     let request_msg: RequestMsg = serde_json::from_str(&request).unwrap();
     request_msg
 }
 
-/*// TODO: This prolly should be (connected to) confirm seed.
-fn generate_seed_hash(seed: SeedSchema) -> ZomeApiResult<HashString> {
-    let seed_hash = HashString::encode_from_str(&"prdel".to_string(), Hash::SHA2256);    // !!! TODO: Use real HCH hashing. This temporary hardcoded nonsense.
-    Ok(seed_hash)
-    // TODO: Hash it, or just commit it and get the hash in one step?
-    // Q: Beware some unhealthy coupling / tangling? (i.e. "process_" function shouldn't commit entries I'd say.)
-}*/
-
 // @ ----------------------------------------------------------------------------------------------
 // @ Processing of the initiation request
 // @
 fn process_toss_response_msg(message: String) -> ZomeApiResult<Address> {
+    // Q: Beware some unhealthy coupling / tangling? (i.e. "process_" function shouldn't commit entries I'd say.)
 
     hdk::debug("process_toss_response_msg()");
     let toss_response: TossResponseMsg = serde_json::from_str(&message).unwrap();
@@ -151,19 +142,13 @@ fn process_toss_response_msg(message: String) -> ZomeApiResult<Address> {
 
     let toss_result = handle_commit_toss(toss.clone());
     
-    // TODO confirm seed, confirm toss, unify the return results. Now bool / JsonString.
-    /* let (seed_confirmed, toss_confirmed) = (
-        confirm_seed(toss_response.responder_seed.clone(), seed_hash.clone()),
-        handle_confirm_toss(toss.clone(), toss_response.toss_hash.clone())
-    );*/
+    // TODO: confirm seed, confirm toss, unify the return results.
    let seed_confirmed = confirm_seed(toss_response.responder_seed.clone(), seed_hash.clone());
     
-    // TODO reveal seed
-    
+    // TODO: reveal seed    
+    // TODO: clarify what to return, this prolly doesn't make much sense now
     toss_result    
 }
-
-
 
 // -------------------------------------- TOSS FUNCTIONS ------------------------------------------
 
@@ -182,88 +167,68 @@ pub fn handle_get_my_address() -> ZomeApiResult<Address> {
  * @return {json}[] {"Result": true, "Entries": ["Rater": "<hash>", "Rating": "<string>"]}
  */
 pub fn handle_set_handle(handle_string: String) -> ZomeApiResult<Address> {
-   
-    // let handle_hash = HashString::encode_from_str(&_handle, Hash::SHA2256);
 
-    // Q: It works with the JsonString(RawString) wrapping. How come?
-    // What are the allowed forms for the argument? Can I see the memory / byte structure somewhere?    
-    // let raw_handle = JsonString::from(RawString::from(_handle.clone()));
-
-    // TODO: Propose a "formatted" hdk::debug! macro PR?
     hdk::debug("handle_set_handle()::_handle: ");
-    // hdk::debug(raw_handle.clone());
-   
-    // let post_entry = Entry::App("post".into(), Post::new(&content, "now").into());
     let handle = entries::HandleSchema { handle: handle_string };
-
-    let handle_entry = Entry::App("handle".into(), handle.clone().into());
-    // hdk::debug(handle_entry.to_string());
-    
-    // Q: It seems having this in genesis doesn't work - throws an exception within the holochain-nodejs. How to?
-    // let handle_address = hdk::commit_entry(&handle_entry);
-    
+    let handle_entry = Entry::App("handle".into(), handle.clone().into());    
     let handle_address = hdk::commit_entry(&handle_entry);
     /* {
-
         // Ok(address) => match hdk::link_entries(&AGENT_ADDRESS, &address, "handle") {
             // Ok(address) => json!({ "address": address }).into(),
             Ok(address) => address,
             Err(hdk_err) => { hdk_err }
         // },
         // Err(hdk_err) => hdk_err.into()
-    }; */
-    
+    }; */    
     // let my_key_entry_address = match hdk::get_entry(hdk::entry_address(&my_key_entry)) {
     hdk::debug(handle_address.clone());
-
     // Q: Still not completely clear on the error handling.
     handle_address
 }
 
-// returns all the handles in the directory
+// Returns all the handles in the directory
 pub fn handle_get_handles() -> ZomeApiResult<JsonString> {
-    Ok("prdelgethandle".into())
+    Ok("[not yet implemented]".into())
 }
 
-// returns the handle of an agent by looking it up on the user's DHT entry, the last handle will be the current one?
+// Returns the handle of an agent by looking it up on the user's DHT entry, the last handle will be the current one?
 pub fn handle_get_handle(_handle: HashString) -> ZomeApiResult<JsonString> {
     Ok(HashString::new().into())
 }
 
 pub fn handle_get_my_handle() -> ZomeApiResult<JsonString> {         
-    Ok("QmWLKuaVVLpHbCLiHuwjpuZaGpY3436HWkKKaqAmz2Axxh".into())
+    Ok("[not yet implemented]".into())
 }
 
-// gets the AgentID (userAddress) based on handle
+// Gets the AgentID (userAddress) based on handle
 pub fn handle_get_agent(_handle: HashString) -> ZomeApiResult<JsonString> {  
     Ok(Address::new().into())
 }
 
+// TODO: Fix the documentation format.
 /*
-/ pub fn handle_request_toss()
-/ Request the toss - initiating the game by doing the first seed commit and sending the request to the agent through gossip (?)
-*/
-
-// pub fn handle_request_toss(_agent_from: Address) -> ZomeApiResult<JsonString> {
+ * Initiates the game by doing the first seed commit and sending the request to the agent through gossip (?)
+ *
+ * @callingType { ZomeApiResult<HashString> }
+ * @exposure { public }
+ * @param { Address } { agent_to }
+ * @param { u8 } { seed_value }
+ * @return { ZomeApiResult<HashString> } 
+ */
 pub fn handle_request_toss(agent_to: Address, seed_value: u8) -> ZomeApiResult<HashString> {     // Q: Misleading name? Cause request over N2N?
         
     // TODO: Body of this function throws "Unable to call zome function" in the HolochainJS for some reason.
     // !!! TODO: This is the culprit block, causing the above mentioned error.
     // Yes, the rand statements. Why? No idea. External crate linking? Or some kind of buffer / array error?
     // TODO: Just a rough random salt and seed. Change to sth more secure.
+    let salt = generate_salt();
+    
     let seed = SeedSchema {
-        salt: "del".to_string(), // TODO: randomize - rand::thread_rng().gen_range(0, 10).to_string()?
+        salt: salt, // TODO: randomize - rand::thread_rng().gen_range(0, 10).to_string()?
         seed_value: seed_value         // Q: Randomize or let user enter thru the UI? rand::thread_rng().gen_range(0, 10)
      };
 
-    // hdk::debug("Generated seed: ");
-    // hdk::debug(seed.seed_value.to_string());
-
     let seed_entry = handle_commit_seed(seed);
-
-    // Q: Can I call gossip functions from here? If yes, how? Or should I do it from the outside of the container?
-    // TODO: Reconsider the design when I get the info. For now, passing the commited seed address to the JS.
-     
     seed_entry
 }
 
@@ -274,15 +239,14 @@ fn generate_seed(salt: String) -> SeedSchema {
     }
 }
 
+// TODO: Generate a proper salt!
+fn generate_salt() -> String {
+    "[to be randomized string or something]".to_string()
+}
+
 // TODO: Update the name to reflect the function. Does it really handle just the receiving?
 // @ Returns: ??? Toss entry address?? Or?? Custom error?
 pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
-
-    // TODO: Send notification, get the data from the UI.
-    // A: send_request
-    // B: generate_seed -> generate_toss -> commit_toss -> send_response
-    // A: handle_response -> commit_toss -> validate_seed -> validate_toss -> send_result
-    // B: receive_result -> validate_result -> announce_result
 
     // Commit seed
     hdk::debug("handle_receive_request(): commiting seed");
@@ -308,7 +272,6 @@ pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
 
     // Send call / response triplet - responder_seed, toss_hash, call
     // Q: Decomposition. Should be called from here or from some "central" function?
-    // send_response();
     let response_msg = TossResponseMsg {
         agent_from: AGENT_ADDRESS.to_string().into(),
         responder_seed: my_seed.clone(),                                
@@ -321,8 +284,7 @@ pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
     hdk::debug("handle_receive_request(): send_response result: ");
     hdk::debug(send_result.unwrap());        // Q: Receiving {Ok: {Ok: ___}} construction. How come? Wrapping?
 
-    // Q: What now?
-
+    // Q: What now here?
     toss_entry
 }
 
@@ -341,19 +303,12 @@ fn send_response(agent_to: Address, response_msg: TossResponseMsg) -> ZomeApiRes
     response
 }
 
-pub fn handle_get_toss_history() -> ZomeApiResult<JsonString> {
-        
-        // let prdel_hash = HashString::encode_from_str(&"haf".to_string(), Hash::SHA2256);        
-        Ok(json!("haf".to_string()).into())
+pub fn handle_get_toss_history() -> ZomeApiResult<JsonString> {              
+    Ok(json!("[not implemented yet]".to_string()).into())
 }
 
 fn handle_commit_seed(seed: SeedSchema) -> ZomeApiResult<Address> {
-
     // TODO: Validate if 9 <= seed >= 0?
-    
-    // let entry_arg = JsonString::from(RawString::from(_seed));
-    // hdk::debug("Raw seed: ");
-    // hdk::debug(entry_arg.clone());
 
     let seed_entry = Entry::App("seed".into(), seed.into());
     hdk::commit_entry(&seed_entry)
@@ -365,7 +320,6 @@ fn handle_commit_seed(seed: SeedSchema) -> ZomeApiResult<Address> {
     //  Err(hdk_err) => Err(hdk_err)
     // };
 }
-
 
 // TODO: Generalize through types - <T>
 fn get_seed_hash(seed: SeedSchema) -> ZomeApiResult<HashString> {
@@ -380,9 +334,8 @@ fn get_toss_hash(toss: TossSchema) -> ZomeApiResult<HashString> {
     toss_hash_generated
 }
 
-
 // TODO: Again, implement a version for general types <T>
-fn confirm_seed(seed: SeedSchema, seed_hash: HashString) -> ZomeApiResult<u8> {
+fn confirm_seed(seed: SeedSchema, seed_hash: HashString) -> ZomeApiResult<bool> {
     
     let seed_hash_generated = get_seed_hash(seed).unwrap();
     hdk::debug("confirm_seed(): ");
@@ -390,20 +343,19 @@ fn confirm_seed(seed: SeedSchema, seed_hash: HashString) -> ZomeApiResult<u8> {
     hdk::debug(seed_hash_generated.clone());
 
     // TODO: Error handling.
-    Ok( match (seed_hash_generated == seed_hash) {
-        true => 1,
-        false => 0
-    })
+    Ok((seed_hash_generated == seed_hash))
 }
 
 // TODO: Won't confirm now, because I'm not storing my seed yet.
+// TODO: JsonString doesn't make much sense here. Also, should be public?
 fn handle_confirm_toss(toss: TossSchema, toss_hash: HashString) -> ZomeApiResult<JsonString> {
+    
     let toss_hash_generated = get_toss_hash(toss).unwrap();
     hdk::debug("confirm_toss(): ");
     hdk::debug(toss_hash.clone());
     hdk::debug(toss_hash_generated.clone());
 
-    // TODO: This - horrible, very temp. (ZomeApiResult doesn't implement bool)
+    // TODO: This - horrible temp. (ZomeApiResult doesn't implement bool.)
     Ok( match (toss_hash_generated == toss_hash) {
         true => json!("{ confirmed: true }").into(),
         false => json!("{ confirmed: false }").into()
@@ -418,28 +370,13 @@ pub fn handle_commit_toss(toss: TossSchema) -> ZomeApiResult<Address> {
     let toss_entry = Entry::App("toss".into(), toss.into());
     let toss_address_result = hdk::commit_entry(&toss_entry);
     toss_address_result
+
+    // Ok(address) => match hdk::link_entries(&AGENT_ADDRESS, &address, "tosses") {
+    // Ok(address) => json!({ "address": address }).into(),
+    // Err(hdk_err) => { hdk_err.into() }
+    // },
+    // Err(hdk_err) => hdk_err.into()
 }
-
-fn _commit_toss(toss: TossSchema) -> ZomeApiResult<Address> {
-
-    let toss_entry = Entry::App("toss".into(), toss.into());
-    let toss_address_result = hdk::commit_entry(&toss_entry); // {
-
-        // Ok(address) => match hdk::link_entries(&AGENT_ADDRESS, &address, "tosses") {
-            //Ok(address) => json!({ "address": address }).into(),
-            //Err(hdk_err) => { hdk_err.into() }
-        // },
-        // Err(hdk_err) => hdk_err.into()
-    // };
-
-    toss_address_result
-}
-
-// TODO: Generate a proper salt!
-fn generate_salt() -> ZomeApiResult<JsonString> {
-    Ok(HashString::new().into())
-}
-
 
 
 // ZOME DEFINITION --------------------------------------------------------------------------------
@@ -476,10 +413,7 @@ define_zome! {
     ]
 
     genesis: || {        
-         // TODO workaround around not-yet-implemented hdk::api::AGENT_ADDRESS
-         // Commit a tomporarily created agent hash to my chain and return the entry address?
             {
-                //handle_set_handle(&AGENT_ADDRESS);
                 Ok(())
             }
          }
@@ -582,7 +516,6 @@ define_zome! {
         ]
     }
 }
-
 
 
 pub fn handle_test_fn(message: String) -> String {
