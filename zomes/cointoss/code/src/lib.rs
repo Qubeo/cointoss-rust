@@ -38,11 +38,20 @@ use crate::entries::{CTEntryType, TossSchema, TossResultSchema, SeedSchema, Addr
 #[derive(Serialize, Deserialize, Debug, DefaultJson, Clone)]
 enum MsgType {
     WannaPlay,
-    RequestToss
+    RequestToss,
+    TossResponse
 }
 
 /// Represents the message 
 /// 
+/// TODO: Add "agent_from" here?
+#[derive(Serialize, Deserialize, Debug, DefaultJson, Clone)]
+struct GeneralMsg {
+    agent_from: Address,
+    message_type: MsgType,
+    message: String
+}
+
 #[derive(Serialize, Deserialize, Debug, DefaultJson, Clone)]
 pub struct RequestMsg {
     agent_from: Address,
@@ -50,9 +59,95 @@ pub struct RequestMsg {
 }
 
 #[derive(Serialize, Deserialize, Debug, DefaultJson, Clone)]
-struct GeneralMsg {
-    message_type: MsgType,
-    message: String
+pub struct TossResponseMsg {
+    agent_from: Address,
+    pub responder_seed: SeedSchema,
+    pub toss_hash: HashString,
+    call: u8
+}
+
+// ----------------------  MESSAGE PROCESSING -----------------------------------------------------
+// N2N NETWORKING ---------------------------------------------------------------------------------
+
+
+// @ ----------------------------------------------------------------------------------------------
+// @ First line message processing
+// @
+fn process_received_message(payload: String) -> ZomeApiResult<String> {
+        
+       let msg: GeneralMsg = serde_json::from_str(&payload).unwrap();
+
+        // Parse the message type and choose the appropriate response
+        match msg.message_type {
+            // Toss request received
+            MsgType::RequestToss => {
+                let request_msg = process_request(msg.message);
+                let receive_request_result = handle_receive_request(request_msg).unwrap();     // TODO: Fix the error handling. What exactly should this return? Should the unwrap be there?
+                Ok(json!(receive_request_result).to_string())
+            },
+            // Response after the other party commited the toss
+            MsgType::TossResponse => {
+                let toss_address = process_toss_response(msg.message);
+                // handle_commit_toss()
+                Ok(json!(toss_address).to_string())
+            }
+            _ => Ok("process_received_message(): [other message type received]".to_string())
+        }
+}
+
+// @ ----------------------------------------------------------------------------------------------
+// @ Sends the request via P2P messaging
+// @
+fn handle_send_request(agent_to: Address, seed_hash: HashString) -> ZomeApiResult<String> {
+    
+    hdk::debug("hdk::send(): ");
+    let msg: RequestMsg = RequestMsg { agent_from: AGENT_ADDRESS.to_string().into(), seed_hash: seed_hash };    
+    let send_msg: GeneralMsg = GeneralMsg { agent_from: AGENT_ADDRESS.to_string().into(), message_type: MsgType::RequestToss, message: json!(msg).to_string() };
+    // Q: Is this the right way? Or use JsonString by default?
+    // ISSUE: When I use string, I get JSON.serialize error (prolly in the JS). Good? Bad?
+    // ISSUE: "agent_from" can be spoofed. Is this fixed yet?    
+    hdk::send(agent_to, json!(send_msg).to_string(), 10000.into())
+}
+
+// TODO: Add error handling.
+fn process_request(request: String) -> RequestMsg {
+    let request_msg: RequestMsg = serde_json::from_str(&request).unwrap();
+    request_msg
+}
+
+
+// TODO: This prolly should be (connected to) confirm seed.
+fn generate_seed_hash(seed: SeedSchema) -> ZomeApiResult<HashString> {
+    let seed_hash = HashString::encode_from_str(&"prdel".to_string(), Hash::SHA2256);    // !!! TODO: Use real HCH hashing. This temporary hardcoded nonsense.
+    Ok(seed_hash)
+    // TODO: Hash it, or just commit it and get the hash in one step?
+    // Q: Beware some unhealthy coupling / tangling? (i.e. "process_" function shouldn't commit entries I'd say.)
+}
+
+// @ ----------------------------------------------------------------------------------------------
+// @ Processing of the initiation request
+// @
+fn process_toss_response(message: String) -> ZomeApiResult<Address> {
+    let toss_response: TossResponseMsg = serde_json::from_str(&message).unwrap();
+
+    // Q: Do I need to do this, or can I just use received hash? Would defy the purpose tho, right?
+    //let initiator: Address = ???; // TODO: get agent_from somehow. How?
+    let seed_hash = generate_seed_hash(toss_response.responder_seed).unwrap();
+
+    // TODO: Confirm / validate seed hash here? Or just store and then - so everyone can see, can't be refuted, if subterfuge?
+
+    // TODO: Persist my seed? Initiator: me, right? What in case of generalizing for more agents?
+    let toss = TossSchema {
+        initiator: Address::from(AGENT_ADDRESS.to_string()),
+        initiator_seed_hash: seed_hash.clone(),  // !!! TODO: My seed hash. This is just a VERY temp hack. Am I persisting my seed somewhere? Links?
+        responder: toss_response.agent_from.clone(),
+        responder_seed_hash: seed_hash.clone(), // HashString::from(&seed_address[12..58]), // TODO: What a dirty trick. BUG?: Shoots down zome function call when e.g. [14..3]. Should?
+        call: 1
+    };
+
+    let toss_result = handle_commit_toss(toss.clone());
+    
+    toss_result    
 }
 
 // -------------------------------------- TOSS FUNCTIONS ------------------------------------------
@@ -135,7 +230,7 @@ pub fn handle_get_agent(_handle: HashString) -> ZomeApiResult<JsonString> {
 */
 
 // pub fn handle_request_toss(_agent_from: Address) -> ZomeApiResult<JsonString> {
-pub fn handle_request_toss(agent_to: Address, seed: u8) -> ZomeApiResult<HashString> {     // Q: Misleading name? Cause request over N2N?
+pub fn handle_request_toss(agent_to: Address, seed_value: u8) -> ZomeApiResult<HashString> {     // Q: Misleading name? Cause request over N2N?
         
     // TODO: Body of this function throws "Unable to call zome function" in the HolochainJS for some reason.
     // !!! TODO: This is the culprit block, causing the above mentioned error.
@@ -143,7 +238,7 @@ pub fn handle_request_toss(agent_to: Address, seed: u8) -> ZomeApiResult<HashStr
     // TODO: Just a rough random salt and seed. Change to sth more secure.
     let seed = SeedSchema {
         salt: "del".to_string(), // TODO: randomize - rand::thread_rng().gen_range(0, 10).to_string()?
-        seed_value: seed         // Q: Randomize or let user enter thru the UI? rand::thread_rng().gen_range(0, 10)
+        seed_value: seed_value         // Q: Randomize or let user enter thru the UI? rand::thread_rng().gen_range(0, 10)
      };
 
     // hdk::debug("Generated seed: ");
@@ -164,14 +259,16 @@ fn generate_seed(salt: String) -> SeedSchema {
     }
 }
 
+// TODO: Update the name to reflect the function. Does it really handle just the receiving?
+// @ Returns: ??? Toss entry address?? Or?? Custom error?
 pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
 
     // TODO: Send notification, get the data from the UI.
-    let my_seed = generate_seed("saltpr".to_string());    
-    let my_seed_hash = handle_commit_seed(my_seed).unwrap();        // Q: Better use HashString or Address? (Idiomatic Holochain :) )
+    // generate_seed -> generate_toss -> commit_toss -> send_response 
 
-    hdk::debug("handle_receive_request() seed_address:");
-    hdk::debug(my_seed_hash.clone());
+    // Commit seed
+    let my_seed = generate_seed("saltpr".to_string());    
+    let my_seed_hash = handle_commit_seed(my_seed.clone()).unwrap();        // Q: Better use HashString or Address? (Idiomatic Holochain :) )
 
     let toss = TossSchema {
         initiator: request.agent_from.clone(),
@@ -181,25 +278,48 @@ pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
         call: 1
     };
 
-    hdk::debug("handle_receive_request() toss.responder_seed_hash: ");
-    hdk::debug(toss.clone().responder_seed_hash);
-        
+    hdk::debug("handle_receive_request() toss initiator: ");
+    hdk::debug(toss.initiator.clone().to_string());
+    
+    // Commit toss
     let toss_entry = handle_commit_toss(toss.clone());
 
     hdk::debug("handle_receive_request() toss_entry:");
     hdk::debug(toss_entry.clone().unwrap());
 
+    // Send call / response triplet - responder_seed, toss_hash, call
+    // Q: Decomposition. Should be called from here or from some "central" function?
+    // send_response();
+    let response_msg = TossResponseMsg {
+        agent_from: AGENT_ADDRESS.to_string().into(),
+        responder_seed: my_seed.clone(),                                
+        toss_hash: toss_entry.clone().unwrap(),
+        call: 1     // TODO: Randomize or let the call be entered otherwise.
+    };
+
+    let send_result = send_response(toss.initiator.clone(), response_msg);
+    
+    hdk::debug("handle_receive_request() send_response result: ");
+    hdk::debug(send_result);
+
     toss_entry
-    // return toss_entry.into();
-    //Ok(json!(toss).into())
+}
+
+fn send_response(agent_to: Address, response_msg: TossResponseMsg) -> ZomeApiResult<String> {
+
+    let wrapped_msg = GeneralMsg {
+        agent_from: AGENT_ADDRESS.to_string().into(),
+        message_type: MsgType::TossResponse,
+        message: json!(response_msg).to_string()
+    };
+
+    hdk::send(agent_to, json!(wrapped_msg).to_string(), 10000.into())
 }
 
 pub fn handle_get_toss_history() -> ZomeApiResult<JsonString> {
         
-        let prdel = "prdel".to_string();
-        let prdel_hash = HashString::encode_from_str(&prdel.clone(), Hash::SHA2256);
-        
-        Ok(json!(prdel_hash).into())
+        // let prdel_hash = HashString::encode_from_str(&"haf".to_string(), Hash::SHA2256);        
+        Ok(json!("haf".to_string()).into())
 }
 
 fn handle_confirm_toss(toss: TossSchema) -> ZomeApiResult<JsonString> {
@@ -230,34 +350,23 @@ fn handle_confirm_toss(toss: TossSchema) -> ZomeApiResult<JsonString> {
 }
 
 
-// Commit functions - should they be a part of the zome? Or private? Or both?
-/*
-/ fn commit_seed()
-/ return: ???
-*/
 fn handle_commit_seed(seed: SeedSchema) -> ZomeApiResult<Address> {
 
-    // Validate if 9 <= seed >= 0 
-    // Generate salt
-    // Hash the salt + seed string (?)
-    // Commit seed to own chain
-    // Return 
+    // TODO: Validate if 9 <= seed >= 0?
+    
+    // let entry_arg = JsonString::from(RawString::from(_seed));
+    // hdk::debug("Raw seed: ");
+    // hdk::debug(entry_arg.clone());
 
-    //let entry_arg = JsonString::from(RawString::from(_seed));
-    //hdk::debug("Raw seed: ");
-    //hdk::debug(entry_arg.clone());
-
-    // let seed_entry = Entry::new(EntryType::App(CTEntryType::seed.to_string()), _seed);
     let seed_entry = Entry::App("seed".into(), seed.into());
-    // hdk::debug(seed_entry.to_string());    
     hdk::commit_entry(&seed_entry)
 
-      // Ok(address) => match hdk::link_entries(&AGENT_ADDRESS, &address, "seeds") {
-      //      Ok(address) => Ok(address),
-      //      Err(hdk_err) => hdk_err 
-      //  },
-      //  Err(hdk_err) => Err(hdk_err)
-    //};
+    // Ok(address) => match hdk::link_entries(&AGENT_ADDRESS, &address, "seeds") {
+    //      Ok(address) => Ok(address),
+    //      Err(hdk_err) => hdk_err 
+    //  },
+    //  Err(hdk_err) => Err(hdk_err)
+    // };
 }
 
 fn confirm_seed() -> ZomeApiResult<JsonString> {
@@ -297,96 +406,6 @@ fn generate_salt() -> ZomeApiResult<JsonString> {
 }
 
 
-// N2N NETWORKING ---------------------------------------------------------------------------------
-
-fn handle_send_request(agent_to: Address, seed_hash: HashString) -> ZomeApiResult<String> {
-    
-    hdk::debug("hdk::send(): ");
-    let msg: RequestMsg = RequestMsg { agent_from: AGENT_ADDRESS.to_string().into(), seed_hash: seed_hash };
-    
-    let send_msg: GeneralMsg = GeneralMsg { message_type: MsgType::RequestToss, message: json!(msg).to_string() };
-    // Q: Is this the right way? Or use JsonString by default?
-    // ISSUE: When I use string, I get JSON.serialize error (prolly in the JS). Good? Bad?
-    // ISSUE: "agent_from" can be spoofed. Is this fixed yet?
-    hdk::send(agent_to, json!(send_msg).to_string(), 10000.into())
-
-    //let result_unwrapped = &result.unwrap();       // Q: How to clone or debug output of ZomeApiResult ?? -> Issue? 
-    //hdk::debug(result.unwrap().clone());        // Q: How to work with unwrapping and cloning without violating the move?
-    //hdk::debug(result_unwrapped);
-    //result
-    // message.clone().to_string()
-    /* match hdk::send(to_agent, message) {
-        Ok(response) => response,
-        Err(error) => error.to_string(),
-    } */
-}
-
-// TODO: Add error handling.
-fn process_request(request: String) -> RequestMsg {
-    let request_msg: RequestMsg = serde_json::from_str(&request).unwrap();
-    request_msg
-}
-
-fn process_received_message(payload: String) -> ZomeApiResult<String> {
-        
-       let msg: GeneralMsg = serde_json::from_str(&payload).unwrap();
-
-        match msg.message_type {
-            MsgType::RequestToss => {
-                let request_msg = process_request(msg.message);
-                // TODO: Error handling.
-                Ok(json!(handle_receive_request(request_msg).unwrap()).to_string())
-            },
-            _ => Ok("process_received_message(): [other message type received]".to_string())
-        }
-
-        //let decoded = json!(payload);
-        // TODO: Deserialize the payload. How? serde::? Into struct? Tuple?        
-        // TODO: Error handling instead of unwrap()
-        
-        //let request_msg: RequestMsg = match serde_json::from_str(&payload) {
-        //    Ok(response) => response,
-        //    Err(_) => { "Error "} // RequestMsg { agent_to: "process_received_message(): Error in deserializing the payload.", seed_hash: "Error" } }
-        //};
-
-        //let request_msg: RequestMsg = serde_json::from_str(&payload).unwrap();
-
-        // Q: Why the messages don't show? Where is this being actually run?
-        //hdk::debug(serde_json::from_str(&payload).unwrap()); // Q: Or do we need some kind of debug signals?
-        // let received = handle_receive_request(request_msg.agent_to.clone(), request_msg.seed_hash.clone()); 
-        //Ok(received.unwrap().to_string())
-
-        // let msg: RequestMsg = serde_json::from_str(json!(&payload.to_string()).unwrap();
-
-        // panic!("Received");
-        // Ok(msg.seed_hash)
-
-        // RequestMsg::try_from(json!(payload).into()); //.deserialize();      
-        //let agent = payload.
-        // Ok(payload.clone()) //.unwrap().to_string())
-        // let decoded = serde_json::
-}
-
-pub fn handle_test_fn(message: String) -> String {
-
-    // ISSUE: This seems to kill the instance somehow, but I don't get the error report / log. Why?
-    // let request_msg: RequestMsg = serde_json::from_value(json!("{prdel:housky}")).unwrap();
-    // let request_msg: RequestMsg = serde_json::from_str("{ron: 3}").unwrap();
-    
-
-    // TODO: Zjistit, jestli to failuje i mimo HCH aplikaci, prostě jen v Rustu nebo WASM Rustu.
-    let foo_json = json!({"agent_to": "prdel", "message": "housky"});
-    let msg: RequestMsg = serde_json::from_str(&foo_json.to_string()).unwrap();
-
-    hdk::debug("HCH/ RequestMsg: ");
-    hdk::debug(msg);
-  
-    // hdk::debug(serde_json::from_str("{ron: 3}").unwrap().to_string());
-
-    return "prdel returned".to_string();
-        //hdk::debug(serde_json::from_str(&payload).unwrap()); // Q: Or do we need some kind of debug signals?
-    //let received = handle_receive_request(request_msg.agent_to.clone(), request_msg.seed_hash.clone()); 
-}
 
 // ZOME DEFINITION --------------------------------------------------------------------------------
 define_zome! {
@@ -431,23 +450,8 @@ define_zome! {
          }
     
     receive: |payload| {
-        // simply pass back the received value, appended to a modifier
-        // format!("{}", payload)
-        // TODO: Filter and process just the "toss request" messages in this way.
 
-        process_received_message(payload).unwrap()
-        // process_received_message(payload).unwrap()       // Q: Shoudn't be some kind of async / promise sth? What if blocking?
-        // receive_toss_request();
-        // process_received_message();
-        //(|| {                                           // OPTIM: Can I do this without the side effects?
-        //    let sender_addr = Address::from("prdel");
-        //    let seed_hash = HashString::from("prdelhash");
-        //    // let received = handle_receive_request(sender_addr, seed_hash);      // ISSUE: Hangs up w/o signals when call handle_receive_request.
-        //    let received = handle_get_my_address();
-        //    hdk::debug("HCH/ In the receive FFEI callback.");               // ERR: This doesn't get displayed :o
-        //    //hdk::debug(received.unwrap());
-        //    received.unwrap().to_string() // payload                   // Q: This does get returned.
-        // })()
+        process_received_message(payload).unwrap() // Q: Shoudn't be some kind of async / promise sth? What if blocking?
      }
 
     functions: [
@@ -482,7 +486,7 @@ define_zome! {
 				handler: handle_get_agent
 			}
             request_toss: {
-				inputs: |agent_to: Address, seed: u8|,
+				inputs: |agent_to: Address, seed_value: u8|,
 				outputs: |result: ZomeApiResult<HashString>|,
 				handler: handle_request_toss
 			}
@@ -542,5 +546,28 @@ define_zome! {
             test_fn
         ]
     }
+}
+
+
+
+pub fn handle_test_fn(message: String) -> String {
+
+    // ISSUE: This seems to kill the instance somehow, but I don't get the error report / log. Why?
+    // let request_msg: RequestMsg = serde_json::from_value(json!("{prdel:housky}")).unwrap();
+    // let request_msg: RequestMsg = serde_json::from_str("{ron: 3}").unwrap();
+    
+    // TODO: Zjistit, jestli to failuje i mimo HCH aplikaci, prostě jen v Rustu nebo WASM Rustu.
+    let foo_json = json!({"agent_to": "prdel", "message": "housky"});
+    let msg: RequestMsg = serde_json::from_str(&foo_json.to_string()).unwrap();
+
+    hdk::debug("HCH/ RequestMsg: ");
+    hdk::debug(msg);
+  
+    // hdk::debug(serde_json::from_str("{ron: 3}").unwrap().to_string());
+
+    return "prdel returned".to_string();
+    
+    //hdk::debug(serde_json::from_str(&payload).unwrap()); // Q: Or do we need some kind of debug signals?
+    //let received = handle_receive_request(request_msg.agent_to.clone(), request_msg.seed_hash.clone()); 
 }
 

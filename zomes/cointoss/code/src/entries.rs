@@ -77,7 +77,7 @@ pub struct TossResultSchema {
     // pub required:  ["toss","result","time_stamp"] // Q: Validation rules?
 }
 
-#[derive(Serialize, Deserialize, Debug, DefaultJson)]
+#[derive(Serialize, Deserialize, Debug, DefaultJson, Clone)]
 pub struct SeedSchema {
     pub salt: String,    
     pub seed_value: u8
