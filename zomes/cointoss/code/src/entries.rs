@@ -102,10 +102,40 @@ pub fn handle_definition() -> ValidatingEntryType {
         description: "",
         sharing: Sharing::Public,
         native_type: HandleSchema,                                // Q: Why does String, or even JsonString not work any more?
+        
         validation_package: || {
             hdk::ValidationPackageDefinition::Entry
         },
-        validation: |handle: HandleSchema, _validation_data: hdk::ValidationData| { Ok(()) }
+        
+        validation: |handle: HandleSchema, _validation_data: hdk::ValidationData| { Ok(()) },
+        
+        links: [
+            to!(
+                "%agent_id",
+                tag: "has_member",
+
+                validation_package: || {
+                    hdk::ValidationPackageDefinition::Entry
+                },
+
+                validation: |_base: Address, _target: Address, _ctx: hdk::ValidationData| {
+                    Ok(())
+                }
+            ),
+            from!(
+                "%agent_id",
+                tag: "member_of",
+
+                validation_package: || {
+                    hdk::ValidationPackageDefinition::Entry
+                },
+
+                validation: |_base: Address, _target: Address, _ctx: hdk::ValidationData| {
+                    Ok(())
+                }
+            )
+        ]
+
     )
 } 
 

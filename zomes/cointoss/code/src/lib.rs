@@ -33,6 +33,8 @@ use hdk::{
 
 // use hdk::api::AGENT_ADDRESS;
 mod entries;
+mod anchor;
+
 use crate::entries::{CTEntryType, TossSchema, TossResultSchema, SeedSchema, AddrSchema};
 
 #[derive(Serialize, Deserialize, Debug, DefaultJson, Clone)]
@@ -154,6 +156,29 @@ fn process_toss_response_msg(message: String) -> ZomeApiResult<Address> {
 pub fn handle_get_my_address() -> ZomeApiResult<Address> {
   
     hdk::debug("HCH/ handle_get_my_address()");
+    Ok(AGENT_ADDRESS.to_string().into())
+}
+
+pub fn handle_register(name: String) -> ZomeApiResult<Address> {
+    let anchor_entry = Entry::App(
+        "anchor".into(),
+        RawString::from("member_directory").into(),
+    );
+
+    // TODO: Check if the handle already exists?
+
+    // Link the anchor to the new agent under the "member_tag" tag (?)
+    let anchor_address = hdk::commit_entry(&anchor_entry)?;
+    hdk::link_entries(&anchor_address, &AGENT_ADDRESS, "member_tag")?;
+
+    let handle_entry = Entry::App(
+        "handle".into(),
+        entries::HandleSchema { handle: name }.into()
+    );
+    
+    let handle_addr = hdk::commit_entry(&handle_entry)?;
+    hdk::link_entries(&AGENT_ADDRESS, &handle_addr, "handle")?;
+
     Ok(AGENT_ADDRESS.to_string().into())
 }
 
@@ -385,7 +410,8 @@ define_zome! {
         entries::handle_definition(),
         entries::toss_definition(),
         entries::toss_result_definition(),
-        entries::seed_definition()
+        entries::seed_definition(),
+        anchor::anchor_definition()
 
         // ISSUE: Q: It seems I can define multiple entries of the same type / content. Isn't this a bug?
 
