@@ -162,7 +162,7 @@ fn receive_toss_response(toss_response: TossResponseMsg) -> ZomeApiResult<Addres
 }
 
 fn read_my_seed_hash() -> ZomeApiResult<Address> {
-    
+
     // TODO: Read from my chain through the link.
     Ok(AGENT_ADDRESS.to_string().into())
 }
@@ -377,16 +377,14 @@ fn handle_commit_seed(seed: SeedSchema) -> ZomeApiResult<Address> {
     // TODO: Validate if 9 <= seed >= 0?
 
     let seed_entry = Entry::App("seed".into(), seed.into());
-    hdk::commit_entry(&seed_entry)
+    let seed_address = hdk::commit_entry(&seed_entry);
 
-    // TODO: What about multiple plays?
+    // Q: Naming conventions: seed_address or seed_hash?
+    // Q: Borrowing and unwrapping - what's the operator priorities?
+    hdk::link_entries(&AGENT_ADDRESS, &seed_address.clone().unwrap(), "seeds");
 
-    // Ok(address) => match hdk::link_entries(&AGENT_ADDRESS, &address, "seeds") {
-    //      Ok(address) => Ok(address),
-    //      Err(hdk_err) => hdk_err 
-    //  },
-    //  Err(hdk_err) => Err(hdk_err)
-    // };
+    seed_address
+    // Q: What about multiple plays?
 }
 
 // TODO: Generalize through types - <T>
