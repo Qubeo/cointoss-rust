@@ -34,6 +34,7 @@ use hdk::{
 // use hdk::api::AGENT_ADDRESS;
 mod entries;
 mod anchor;
+mod utils;
 
 use crate::entries::{CTEntryType, TossSchema, TossResultSchema, SeedSchema, AddrSchema};
 
@@ -164,7 +165,16 @@ fn receive_toss_response(toss_response: TossResponseMsg) -> ZomeApiResult<Addres
 fn read_my_seed_hash() -> ZomeApiResult<Address> {
 
     // TODO: Read from my chain through the link.
-    Ok(AGENT_ADDRESS.to_string().into())
+    // let my_seed_hash = hdk::get_links();
+    // Q: What does this do??
+    let my_seed_addrs = hdk::get_links(&AGENT_ADDRESS, "seeds")?.addresses().to_owned();
+    
+    hdk::debug("HCH/ read_my_seed_hash()");
+    hdk::debug(my_seed_addrs.clone());
+    // TODO: Find out what exactly am I getting here.
+    // TODO: Error handling.
+    Ok(my_seed_addrs[0].clone())
+    //Ok(AGENT_ADDRESS.to_string().into())
 }
 
 // -------------------------------------- TOSS FUNCTIONS ------------------------------------------
