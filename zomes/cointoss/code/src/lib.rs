@@ -88,9 +88,12 @@ fn process_received_message(payload: String) -> ZomeApiResult<String> {
             },
             // Response after the other party commited the toss ----------------------------
             MsgType::TossResponse => {
-                let toss_address = process_toss_response_msg(msg.message);
+                let toss_response = process_toss_response_msg(msg.message);
+                // TODO: Better naming. handle_toss_response? But, potentially confusing "handle".
+                let result = receive_toss_response(toss_response);
+
                 // handle_commit_toss()
-                Ok(json!(toss_address).to_string())
+                Ok(json!(result).to_string())
             }
             // Other message type received -------------------------------------------------
             _ => Ok("process_received_message(): [other message type received]".to_string())
@@ -120,35 +123,48 @@ fn process_request(request: String) -> RequestMsg {
 // @ ----------------------------------------------------------------------------------------------
 // @ Processing of the initiation request
 // @
-fn process_toss_response_msg(message: String) -> ZomeApiResult<Address> {
+fn process_toss_response_msg(message: String) -> TossResponseMsg {
     // Q: Beware some unhealthy coupling / tangling? (i.e. "process_" function shouldn't commit entries I'd say.)
 
     hdk::debug("process_toss_response_msg()");
     let toss_response: TossResponseMsg = serde_json::from_str(&message).unwrap();
 
-    // Q: Do I need to do this, or can I just use received hash? Would defy the purpose tho, right?
-    //let initiator: Address = ???; // TODO: get agent_from somehow. How?
-    let seed_hash = get_seed_hash(toss_response.responder_seed.clone()).unwrap();
+    toss_response
+}
 
-    // TODO: Confirm / validate seed hash here? Or just store and then - so everyone can see, can't be refuted, if subterfuge?
+fn receive_toss_response(toss_response: TossResponseMsg) -> ZomeApiResult<Address> {
+    
+    // TODO: Read my seed hash from my chain. Or?
+    // TODO: Unify nomenclature reference point - my vs. initiator.
+    let my_seed_hash = read_my_seed_hash().unwrap();
+    let responder_seed_hash = get_seed_hash(toss_response.responder_seed.clone()).unwrap();
 
-    // TODO: Persist my seed? Initiator: me, right? What in case of generalizing for more agents?
     let toss = TossSchema {
         initiator: Address::from(AGENT_ADDRESS.to_string()),
-        initiator_seed_hash: seed_hash.clone(),  // !!! TODO: My seed hash. This is just a VERY temp hack. Am I persisting my seed somewhere? Links?
+        initiator_seed_hash: my_seed_hash,
         responder: toss_response.agent_from.clone(),
-        responder_seed_hash: seed_hash.clone(), // HashString::from(&seed_address[12..58]), // TODO: What a dirty trick. BUG?: Shoots down zome function call when e.g. [14..3]. Should?
+        responder_seed_hash: responder_seed_hash.clone(),
         call: 1
     };
 
     let toss_result = handle_commit_toss(toss.clone());
     
     // TODO: confirm seed, confirm toss, unify the return results.
-   let seed_confirmed = confirm_seed(toss_response.responder_seed.clone(), seed_hash.clone());
+    let seed_confirmed = confirm_seed(toss_response.responder_seed.clone(), responder_seed_hash.clone());
     
+    // Q: Do I need to do this, or can I just use received hash? Would defy the purpose tho, right?
+    // TODO: Confirm / validate seed hash here? Or just store and then - so everyone can see, can't be refuted, if subterfuge?
+    // TODO: Persist my seed? Initiator: me, right? What in case of generalizing for more agents?
+
     // TODO: reveal seed    
     // TODO: clarify what to return, this prolly doesn't make much sense now
     toss_result    
+}
+
+fn read_my_seed_hash() -> ZomeApiResult<Address> {
+    
+    // TODO: Read from my chain through the link.
+    Ok(AGENT_ADDRESS.to_string().into())
 }
 
 // -------------------------------------- TOSS FUNCTIONS ------------------------------------------
@@ -159,37 +175,48 @@ pub fn handle_get_my_address() -> ZomeApiResult<Address> {
     Ok(AGENT_ADDRESS.to_string().into())
 }
 
-pub fn handle_register(name: String) -> ZomeApiResult<Address> {
-    let anchor_entry = Entry::App(
-        "anchor".into(),
-        RawString::from("member_directory").into(),
-    );
-
-    // TODO: Check if the handle already exists?
-
-    // Link the anchor to the new agent under the "member_tag" tag (?)
-    let anchor_address = hdk::commit_entry(&anchor_entry)?;
-    hdk::link_entries(&anchor_address, &AGENT_ADDRESS, "member_tag")?;
-
-    let handle_entry = Entry::App(
-        "handle".into(),
-        entries::HandleSchema { handle: name }.into()
-    );
-    
-    let handle_addr = hdk::commit_entry(&handle_entry)?;
-    hdk::link_entries(&AGENT_ADDRESS, &handle_addr, "handle")?;
-
-    Ok(AGENT_ADDRESS.to_string().into())
-}
-
 /*
- * Returns the list of Ratings of a particular Ratee.
+ * Registers the handle and connects it to the anchor
  *
  * @callingType {json}
  * @exposure {public}
  * @param {json} { "Ratee": "<agenthash>" }
  * @return {json}[] {"Result": true, "Entries": ["Rater": "<hash>", "Rating": "<string>"]}
  */
+pub fn handle_register(name: String) -> ZomeApiResult<Address> {
+
+    let anchor_entry = Entry::App(
+        "anchor".into(),
+        RawString::from("member_directory").into(),
+    );
+
+    // TODO: Check if the handle already exists?
+    
+    // Q: Why creating the anchor here? Perhaps just once? Perhaps in genesis?
+    //    Or even in genesis of the application - just the first agent?
+    // Link the anchor to the new agent under the "member_tag" tag (?)
+    let anchor_address = hdk::commit_entry(&anchor_entry);
+    hdk::link_entries(&anchor_address.clone().unwrap(), &AGENT_ADDRESS, "member_tag");
+
+    let handle_entry = Entry::App(
+        "handle".into(),
+        entries::HandleSchema { handle: name }.into()
+    );
+
+    let handle_addr = hdk::commit_entry(&handle_entry);
+    hdk::link_entries(&AGENT_ADDRESS, &handle_addr.clone().unwrap(), "handle");
+
+    // Q: When leaving ...)?; syntax, there were problems, the handle_register function didn't return properly... or perhaps returned too soon, IDK
+    // TODO: Find what exactly does the "?" do.
+
+    hdk::debug("HCH/ handle_register(): handle_addr");
+    hdk::debug(handle_addr.clone().unwrap());
+
+    // Q: How come in handle_set_handle it works w/o the Ok() wrapping??
+    handle_addr // Ok(AGENT_ADDRESS.to_string().into())
+}
+
+
 pub fn handle_set_handle(handle_string: String) -> ZomeApiResult<Address> {
 
     hdk::debug("handle_set_handle()::_handle: ");
@@ -252,8 +279,22 @@ pub fn handle_request_toss(agent_to: Address, seed_value: u8) -> ZomeApiResult<H
         seed_value: seed_value         // Q: Randomize or let user enter thru the UI? rand::thread_rng().gen_range(0, 10)
      };
 
-    let seed_entry = handle_commit_seed(seed);
-    seed_entry
+    let seed_addr = handle_commit_seed(seed);
+
+    /* let toss = TossSchema {
+        initiator: AGENT_ADDRESS.to_string().into(),
+        initiator_seed_hash: seed_addr,
+        responder: agent_to,
+        responder_seed_hash: 
+    };
+
+    let toss_addr = handle_commit_toss(); */
+
+    // Q: Sync chaining vs. async waiting? Fragility vs. composability?
+    let received = handle_send_request(agent_to, seed_addr.clone().unwrap());
+    seed_addr
+
+    // seed_entry
 }
 
 fn generate_seed(salt: String) -> SeedSchema {
@@ -296,6 +337,7 @@ pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
 
     // Send call / response triplet - responder_seed, toss_hash, call
     // Q: Decomposition. Should be called from here or from some "central" function?
+    // Q: Am I, as B, already revealing the seed here? Should I?
     let response_msg = TossResponseMsg {
         agent_from: AGENT_ADDRESS.to_string().into(),
         responder_seed: my_seed.clone(),                                
@@ -336,6 +378,8 @@ fn handle_commit_seed(seed: SeedSchema) -> ZomeApiResult<Address> {
 
     let seed_entry = Entry::App("seed".into(), seed.into());
     hdk::commit_entry(&seed_entry)
+
+    // TODO: What about multiple plays?
 
     // Ok(address) => match hdk::link_entries(&AGENT_ADDRESS, &address, "seeds") {
     //      Ok(address) => Ok(address),
@@ -454,6 +498,11 @@ define_zome! {
 				outputs: |result: ZomeApiResult<Address>|,       // Q: Not sure about the return type. HashString? Or everything here JsonString?
 				handler: handle_get_my_address                      // Q: If everything is expected to be JsonString, why ask the type at all - verbose?
 			}
+            register: {
+                inputs: |handle: String|,
+                outputs: |result: ZomeApiResult<Address>|,
+                handler: handle_register 
+            }
     		set_handle: {
 				inputs: |handle: String|,
 				outputs: |result: ZomeApiResult<Address>|,      // Q: How does this syntax work? Closure arguments without follow up function body? :o
@@ -525,6 +574,7 @@ define_zome! {
     traits: {
         hc_public [
             get_my_address,
+            register,
             set_handle,
             get_handles,
             get_handle,

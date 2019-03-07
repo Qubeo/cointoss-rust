@@ -56,8 +56,8 @@ console.log("//*************** 'Call the set_handle() function, expect entry add
 
   const handle_alice = { handle: name_alice };
   const handle_bob   = { handle: name_bob };
-  result_alice = await alice.callSync('cointoss', 'set_handle', handle_alice);
-  result_bob = await bob.callSync('cointoss', 'set_handle', handle_bob);
+  result_alice = await alice.callSync('cointoss', 'register', handle_alice);
+  result_bob = await bob.callSync('cointoss', 'register', handle_bob);
 
   console.log("JS/ set_handle() result:" + result_alice.Ok);
   console.log("JS/ set_handle() result:" + result_bob.Ok);
