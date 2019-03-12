@@ -23,11 +23,17 @@ use hdk::{
     // self,
     error::ZomeApiResult,
     holochain_core_types::{
-        cas::content::Address, dna::entry_types::Sharing, entry::Entry, error::HolochainError, json::{ JsonString, RawString }, hash::HashString 
+        cas::content::{ Address, Content, AddressableContent },
+        dna::entry_types::Sharing, entry::Entry,
+        error::HolochainError,
+        json::{ JsonString, RawString },
+        hash::HashString
     },
     holochain_wasm_utils::api_serialization::{
-        get_entry::GetEntryOptions, get_links::GetLinksResult,
+        get_entry::{ * },
+        get_links::GetLinksResult,
     },
+    utils,
     api::AGENT_ID_STR, AGENT_ADDRESS
 };
 
@@ -68,6 +74,7 @@ pub struct TossResponseMsg {
     pub toss_hash: HashString,
     call: u8
 }
+
 
 // ----------------------  MESSAGE PROCESSING  ----------------------------------------------------
 // P2P MESSAGING- ---------------------------------------------------------------------------------
@@ -149,17 +156,90 @@ fn receive_toss_response(toss_response: TossResponseMsg) -> ZomeApiResult<Addres
     };
 
     let toss_result = handle_commit_toss(toss.clone());
+    let toss_addr = toss_result.clone().unwrap();
+    // Q: How to verify the toss is right?
     
     // TODO: confirm seed, confirm toss, unify the return results.
-    let seed_confirmed = confirm_seed(toss_response.responder_seed.clone(), responder_seed_hash.clone());
-    
+
     // Q: Do I need to do this, or can I just use received hash? Would defy the purpose tho, right?
     // TODO: Confirm / validate seed hash here? Or just store and then - so everyone can see, can't be refuted, if subterfuge?
     // TODO: Persist my seed? Initiator: me, right? What in case of generalizing for more agents?
 
     // TODO: reveal seed    
     // TODO: clarify what to return, this prolly doesn't make much sense now
-    toss_result    
+
+    let seed_confirmed = confirm_seed(toss_response.responder_seed.clone(), responder_seed_hash.clone());
+    // TODO: What exactly am I confirming here? I think now I'm just confirming my toss, not his.
+    let toss_confirmed = handle_confirm_toss(toss.clone(), toss_addr);
+
+    // TODO: Horrible temp. Rewrite proper error handling.
+    let seed_confirmed = match seed_confirmed.unwrap() {
+        true => {
+            hdk::debug("HCH/ receive_toss_response(): Seed valid!");
+            true
+        },
+        _ => {
+             hdk::debug("HCH/ receive_toss_response(): Seed invalid!");
+             false
+        }
+    };
+
+    let toss_confirmed = match toss_confirmed.unwrap() {
+        1 => {
+            hdk::debug("HCH/ receive_toss_response(): Toss valid!");           
+            true
+        },
+        _ => {
+            hdk::debug("HCH/ receive_toss_response(): Toss invalid!");
+            false
+        }
+    };
+
+    // Learning: Can I tell what I need to know to do the eval, from the top of my head? No? Then I don't have it modelled properly yet.
+    evaluate_winner(toss_response);
+
+    toss_result
+}
+
+
+
+// TODO: Find a better, more general name.
+// Q: What would be the ideal variable to return, according to best practices?
+fn evaluate_winner(toss_response: TossResponseMsg) -> bool {
+
+    // Q: Reveal my seed here?
+    let my_seed_addr = read_my_seed_hash().unwrap();
+    let my_seed_result = hdk::get_entry(&my_seed_addr).unwrap();     // Q: Why need to do two unwraps? TODO: Error handling.
+    let my_seed_entry = my_seed_result.unwrap();
+    let my_seed: SeedSchema = hdk::utils::get_as_type::<SeedSchema>(my_seed_entry); // my_seed_entry.content();      // Q: It was neccessary to use hdk::holochain_core_types::cas::content::AddressableContent; Why?
+
+    //pub fn get_as_type<R: TryFrom<AppEntryValue>>(
+    //address: Address
+    //) -> ZomeApiResult<R>
+
+    // let my_seed_json: Entry::App(, val2) = serde_json::from_str(my_seed.clone().to_string()); // my_seed.into();
+    
+    // TODO: How would an idiomatic way to write this look like?
+    // let my_seed: Entry::App = serde_json::from_str(&Content::from(&my_seed_entry).to_string()).unwrap();
+    // let my_seed = my_seed_entry.// entry::GetEntryResultItem::new(my_seed_entry);
+    // serde_json::from_str(&Content::from(&my_seed_entry).to_string()).unwrap(); // json!(Content::from(my_seed_entry)).into();
+    
+
+    //let my_seed: SeedSchema = my_seed_entry
+
+    hdk::debug("HCH/ evaluate_winner(): my_seed entry");    
+    hdk::debug(my_seed.unwrap());
+    // hdk::debug(RawString::from(Content::from(&my_seed_entry).to_string()));
+
+    // TODO: Convert the entry to the SeedSchema struct. How?
+
+    // Evaluation: Evaluating whether "call" and "initiator_seed_val + responder_seed_val % 2" have same parity (odd / even)
+    let did_i_win = true; //toss_response.call == ((my_seed.seed_value + toss_response.responder_seed.seed_value) % 2);
+        
+    did_i_win
+
+    // OPTIM: How not to need to query for my seed again?
+    // Persistence? Or do it in one function? Or?
 }
 
 fn read_my_seed_hash() -> ZomeApiResult<Address> {
@@ -167,13 +247,23 @@ fn read_my_seed_hash() -> ZomeApiResult<Address> {
     // TODO: Read from my chain through the link.
     // let my_seed_hash = hdk::get_links();
     // Q: What does this do??
-    let my_seed_addrs = hdk::get_links(&AGENT_ADDRESS, "seeds")?.addresses().to_owned();
+    // Q: Use anchor or not? Difference?
+    // let anchor_addr = hdk::get?
+    // let my_seed_addrs = hdk::get_links(&AGENT_ADDRESS, "seeds")?.addresses().to_owned();
+
+    // Q: Querying local chain (instead of the DHT). Would it make sense to rather query the DHT?
+    // As in the original cointoss?
+    let my_seed_addrs = hdk::query("seed".into(), 0, 0);
     
     hdk::debug("HCH/ read_my_seed_hash()");
     hdk::debug(my_seed_addrs.clone());
+
+    let addrs = my_seed_addrs.unwrap().clone();
     // TODO: Find out what exactly am I getting here.
     // TODO: Error handling.
-    Ok(my_seed_addrs[0].clone())
+    // TODO: In case of multiple plays, figure out to get the actual one.
+    Ok(addrs[0].clone())
+    // Ok("QmbydC6m2UGJzAaCv6nQWZu4aHJq7YA1BcLBzA4jQ7f7hQ".to_string().into())
     //Ok(AGENT_ADDRESS.to_string().into())
 }
 
@@ -389,6 +479,8 @@ fn handle_commit_seed(seed: SeedSchema) -> ZomeApiResult<Address> {
     let seed_entry = Entry::App("seed".into(), seed.into());
     let seed_address = hdk::commit_entry(&seed_entry);
 
+    // Q: Link it to an anchor? Or?
+
     // Q: Naming conventions: seed_address or seed_hash?
     // Q: Borrowing and unwrapping - what's the operator priorities?
     hdk::link_entries(&AGENT_ADDRESS, &seed_address.clone().unwrap(), "seeds");
@@ -404,6 +496,7 @@ fn get_seed_hash(seed: SeedSchema) -> ZomeApiResult<HashString> {
     seed_hash_generated
 }
 
+// Q: Better use reference, or pass the whole struct?
 fn get_toss_hash(toss: TossSchema) -> ZomeApiResult<HashString> {
     let toss_entry = Entry::App("toss".into(), toss.into());
     let toss_hash_generated = hdk::entry_address(&toss_entry);
@@ -424,18 +517,19 @@ fn confirm_seed(seed: SeedSchema, seed_hash: HashString) -> ZomeApiResult<bool> 
 
 // TODO: Won't confirm now, because I'm not storing my seed yet.
 // TODO: JsonString doesn't make much sense here. Also, should be public?
-fn handle_confirm_toss(toss: TossSchema, toss_hash: HashString) -> ZomeApiResult<JsonString> {
+fn handle_confirm_toss(toss: TossSchema, toss_hash: HashString) -> ZomeApiResult<u32> {
     
     let toss_hash_generated = get_toss_hash(toss).unwrap();
     hdk::debug("confirm_toss(): ");
     hdk::debug(toss_hash.clone());
     hdk::debug(toss_hash_generated.clone());
 
-    // TODO: This - horrible temp. (ZomeApiResult doesn't implement bool.)
-    Ok( match (toss_hash_generated == toss_hash) {
+    // !!! TODO: This - horrible temp. (ZomeApiResult doesn't implement bool.)
+    /* Ok( match (toss_hash_generated == toss_hash) {
         true => json!("{ confirmed: true }").into(),
         false => json!("{ confirmed: false }").into()
-    })
+    }) */
+    Ok(1)
 }
 
 pub fn handle_commit_toss(toss: TossSchema) -> ZomeApiResult<Address> {
@@ -547,8 +641,8 @@ define_zome! {
                 handler: handle_receive_request
             }
             confirm_toss: {
-				inputs: |toss: TossSchema, toss_hash: HashString|,
-				outputs: |result: ZomeApiResult<JsonString>|,
+				inputs: |toss: TossSchema, toss_hash: HashString|,         // Q: When using &TossSchema, expects a lifetime parameter. WKO?
+				outputs: |result: ZomeApiResult<u32>|,
 				handler: handle_confirm_toss
 			}
             get_toss_history: {

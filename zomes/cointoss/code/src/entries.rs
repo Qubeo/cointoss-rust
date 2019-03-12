@@ -133,6 +133,18 @@ pub fn handle_definition() -> ValidatingEntryType {
                 validation: |_base: Address, _target: Address, _ctx: hdk::ValidationData| {
                     Ok(())
                 }
+            ),
+            to!(
+                "seed",
+                tag: "seeds",       // TODO: Distinguish - the same or different to "seeds" (smwh else)?
+
+                validation_package: || {
+                    hdk::ValidationPackageDefinition::Entry
+                },
+
+                validation: |_base: Address, _target: Address, _ctx: hdk::ValidationData| {
+                    Ok(())
+                }
             )
         ]
 

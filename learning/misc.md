@@ -11,6 +11,10 @@ When agent B receives the toss request, he could get notified (how?) and prompte
 Create a VSCode macro, copying any "//Q: " statements into this file as questions.
     Ideally even linking them and reflecting changes, ha :)
 
+Variation ideas:
+    Two-sided timed-out stake (alá HTLC (Hash Time Lock Time) / ILP (Inter Ledger Protocol) - Chris Chung mentioned, implemented by XRP)
+    Weighed coin
+    
 
 **Questions**
 Questions of persistence: persisting e.g. my seed structure? So I can then hash it to the toss, when receiving the response from B?
