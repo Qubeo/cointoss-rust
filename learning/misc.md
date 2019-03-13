@@ -39,7 +39,9 @@ Error: "const result_seedhash = container.callRaw("prdelA::./dist/bundle.json", 
 TODO: Propose a "formatted" hdk::debug! macro PR?
 
 
-**Learnings**
+**Misc learnings, notes**
+Setting environment values in PSH: $env:MyTestVariable = "My temporary test variable."
+Silence the noisy DHT debug logs: $env:HC_N3H_LOG_LEVEL='x' ('x' can be: 't', 'd', 'i', 'v', 'e')
 
 
 **Notes**

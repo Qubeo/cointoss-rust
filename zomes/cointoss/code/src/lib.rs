@@ -40,7 +40,7 @@ use hdk::{
 // use hdk::api::AGENT_ADDRESS;
 mod entries;
 mod anchor;
-mod utils;
+// mod utils;
 
 use crate::entries::{CTEntryType, TossSchema, TossResultSchema, SeedSchema, AddrSchema};
 
@@ -211,7 +211,9 @@ fn evaluate_winner(toss_response: TossResponseMsg) -> bool {
     let my_seed_addr = read_my_seed_hash().unwrap();
     let my_seed_result = hdk::get_entry(&my_seed_addr).unwrap();     // Q: Why need to do two unwraps? TODO: Error handling.
     let my_seed_entry = my_seed_result.unwrap();
-    let my_seed: SeedSchema = hdk::utils::get_as_type::<SeedSchema>(my_seed_entry); // my_seed_entry.content();      // Q: It was neccessary to use hdk::holochain_core_types::cas::content::AddressableContent; Why?
+    
+    // !!! Q: It seems that it allows to somehow fit different type to my SeedSchema?? :o Cause w/ App etc.
+    let my_seed: SeedSchema = hdk::utils::get_as_type::<SeedSchema>(my_seed_addr).unwrap(); // my_seed_entry.content();      // Q: It was neccessary to use hdk::holochain_core_types::cas::content::AddressableContent; Why?
 
     //pub fn get_as_type<R: TryFrom<AppEntryValue>>(
     //address: Address
@@ -227,8 +229,9 @@ fn evaluate_winner(toss_response: TossResponseMsg) -> bool {
 
     //let my_seed: SeedSchema = my_seed_entry
 
-    hdk::debug("HCH/ evaluate_winner(): my_seed entry");    
-    hdk::debug(my_seed.unwrap());
+    // TODO: This seems to be returning a nonsense. Should be SeedSchema, but returns Entry::App or sth?
+    hdk::debug("HCH/ evaluate_winner(): my_seed SeedSchema");    
+    hdk::debug(my_seed.seed_value.to_string());
     // hdk::debug(RawString::from(Content::from(&my_seed_entry).to_string()));
 
     // TODO: Convert the entry to the SeedSchema struct. How?
