@@ -2,9 +2,6 @@
 	"folders": [
 		{
 			"path": "."
-		},
-		{
-			"path": "C:\\Users\\My PC\\.cargo\\registry\\src"
 		}
 	],
 	"settings": {}

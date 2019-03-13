@@ -4,7 +4,7 @@ Scenario.setTape(require('tape'));
 const test = require('tape');
 const tapSpec = require('tap-spec');
 
-const dnaPath = "dist/bundle.json";
+const dnaPath = "dist/cointoss-rust.dna.json";
 const dna = Config.dna(dnaPath, 'happs');    // Q: What's this?
 
 const name_alice = "alice";
@@ -37,7 +37,7 @@ scenario.runTape('Can get address of both players', async (t, {alice, bob}) => {
   var result_alice = await alice.callSync('cointoss', 'get_my_address', {});
   var result_bob   = await bob.callSync('cointoss', 'get_my_address', {});    
   console.log("addr_result_Alice: " + result_alice.Ok);
-  console.log("addr_result_Alice: " + result_bob.Ok);
+  console.log("addr_result_Bob: " + result_bob.Ok);
 
   // Q: What if the returned value is not Ok, but Err? What then?
   // Test if the returned value has 92 bytes - lenght of the address

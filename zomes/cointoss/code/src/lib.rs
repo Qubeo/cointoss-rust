@@ -230,7 +230,7 @@ fn evaluate_winner(toss_response: TossResponseMsg) -> bool {
     //let my_seed: SeedSchema = my_seed_entry
 
     // TODO: This seems to be returning a nonsense. Should be SeedSchema, but returns Entry::App or sth?
-    hdk::debug("HCH/ evaluate_winner(): my_seed SeedSchema");    
+    hdk::api::debug("HCH/ evaluate_winner(): my_seed SeedSchema");    
     hdk::debug(my_seed.seed_value.to_string());
     // hdk::debug(RawString::from(Content::from(&my_seed_entry).to_string()));
 
