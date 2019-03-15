@@ -205,6 +205,7 @@ fn receive_toss_response(toss_response: TossResponseMsg) -> ZomeApiResult<Addres
 
 // TODO: Find a better, more general name.
 // Q: What would be the ideal variable to return, according to best practices?
+// Initiator
 fn evaluate_winner(toss_response: TossResponseMsg) -> bool {
 
     // Q: Reveal my seed here?
@@ -215,35 +216,43 @@ fn evaluate_winner(toss_response: TossResponseMsg) -> bool {
     // !!! Q: It seems that it allows to somehow fit different type to my SeedSchema?? :o Cause w/ App etc.
     let my_seed: SeedSchema = hdk::utils::get_as_type::<SeedSchema>(my_seed_addr).unwrap(); // my_seed_entry.content();      // Q: It was neccessary to use hdk::holochain_core_types::cas::content::AddressableContent; Why?
 
-    //pub fn get_as_type<R: TryFrom<AppEntryValue>>(
-    //address: Address
-    //) -> ZomeApiResult<R>
-
-    // let my_seed_json: Entry::App(, val2) = serde_json::from_str(my_seed.clone().to_string()); // my_seed.into();
-    
     // TODO: How would an idiomatic way to write this look like?
     // let my_seed: Entry::App = serde_json::from_str(&Content::from(&my_seed_entry).to_string()).unwrap();
     // let my_seed = my_seed_entry.// entry::GetEntryResultItem::new(my_seed_entry);
     // serde_json::from_str(&Content::from(&my_seed_entry).to_string()).unwrap(); // json!(Content::from(my_seed_entry)).into();
     
-
-    //let my_seed: SeedSchema = my_seed_entry
-
-    // TODO: This seems to be returning a nonsense. Should be SeedSchema, but returns Entry::App or sth?
-    hdk::api::debug("HCH/ evaluate_winner(): my_seed SeedSchema");    
-    hdk::debug(my_seed.seed_value.to_string());
+    let did_responder_win = check_call(my_seed.seed_value, toss_response.responder_seed.seed_value, toss_response.call);
     // hdk::debug(RawString::from(Content::from(&my_seed_entry).to_string()));
 
     // TODO: Convert the entry to the SeedSchema struct. How?
-
     // Evaluation: Evaluating whether "call" and "initiator_seed_val + responder_seed_val % 2" have same parity (odd / even)
-    let did_i_win = true; //toss_response.call == ((my_seed.seed_value + toss_response.responder_seed.seed_value) % 2);
-        
-    did_i_win
+
+    // hdk::debug("HCH/ evaluate_winner(): my_seed.seed_value");    
+    let result_formatted = format!("HCH/ evaluate_winner(): initiator seedval: {}, responder seedval: {}, responder call: {}, responder won: {}",
+        my_seed.seed_value,
+        toss_response.responder_seed.seed_value,
+        toss_response.call,
+        did_responder_win);
+
+    hdk::debug(result_formatted);
+
+    did_responder_win
 
     // OPTIM: How not to need to query for my seed again?
     // Persistence? Or do it in one function? Or?
 }
+
+// TODO: More fitting name
+fn check_call(initiator_seed_value: u8, responder_seed_value: u8, responder_call: u8) -> bool {
+    if (initiator_seed_value + responder_seed_value) % 2 == responder_call {
+        true
+    }
+    else {
+        false
+    }
+}
+
+// TODO: reveal_seed() public function? To allow others to ask for the seed, once tossess commited?
 
 fn read_my_seed_hash() -> ZomeApiResult<Address> {
 

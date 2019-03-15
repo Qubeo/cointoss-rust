@@ -15,7 +15,7 @@ const agentBob   = Config.agent(name_bob);
 const instanceAlice = Config.instance(agentAlice, dna);
 const instanceBob   = Config.instance(agentBob, dna);
 
-const scenario = new Scenario([instanceAlice, instanceBob]);
+const scenario = new Scenario([instanceAlice, instanceBob], { debugLog: true });
 
 // test.createStream()
 //  .pipe(tapSpec())
@@ -34,8 +34,8 @@ var g_received_toss;
 // Q: How and where exactly are the "{alice, bob}" related to my configurations? Matched to the strings?
 scenario.runTape('Can get address of both players', async (t, {alice, bob}) => {
 
-  var result_alice = await alice.callSync('cointoss', 'get_my_address', {});
-  var result_bob   = await bob.callSync('cointoss', 'get_my_address', {});    
+  var result_alice = await alice.call('cointoss', 'get_my_address', {});
+  var result_bob   = await bob.call('cointoss', 'get_my_address', {});    
   console.log("addr_result_Alice: " + result_alice.Ok);
   console.log("addr_result_Bob: " + result_bob.Ok);
 
@@ -56,8 +56,8 @@ console.log("//*************** 'Call the set_handle() function, expect entry add
 
   const handle_alice = { handle: name_alice };
   const handle_bob   = { handle: name_bob };
-  result_alice = await alice.callSync('cointoss', 'register', handle_alice);
-  result_bob = await bob.callSync('cointoss', 'register', handle_bob);
+  result_alice = await alice.call('cointoss', 'register', handle_alice);
+  result_bob = await bob.call('cointoss', 'register', handle_bob);
 
   console.log("JS/ set_handle() result:" + result_alice.Ok);
   console.log("JS/ set_handle() result:" + result_bob.Ok);
@@ -77,7 +77,7 @@ console.log("//*************** 'Call the set_handle() function, expect entry add
   console.log("//**************** 'Initiate a toss by calling request_toss()'");
 
   const request = { agent_to: g_address_bob, seed_value: 12 };
-  const result_request = await alice.callSync('cointoss', 'request_toss', request);
+  const result_request = await alice.call('cointoss', 'request_toss', request);
   console.log("JS/ result_request:")
   console.log(result_request);
 
@@ -92,7 +92,7 @@ console.log("//********************* 'Agent A/ Send the seed hash through N3H'")
 //scenario.runTape('Agent A/ Send the seed hash through N3H', async (t, {alice, bob}) => {
 // test('Agent A/ Send the seed hash through N3H', async (t) => {
   const send_message = { agent_to: g_address_bob, seed_hash: g_seed_hash_a};
-  const result_seedhash_a = await alice.callSync('cointoss', 'send_request', send_message);
+  const result_seedhash_a = await alice.call('cointoss', 'send_request', send_message);
 
   console.log("JS/ result_seedhash B: ");
   console.log(result_seedhash_a);   // Q: .Ok doesn't work. Why? Need to deserialize into JSON here? Why?
@@ -121,7 +121,7 @@ console.log("//************************* Agent B Commit the toss");
     call: 1
   };
 
-  const result_toss = await bob.callSync('cointoss', 'commit_toss', { toss: toss_struct });
+  const result_toss = await bob.call('cointoss', 'commit_toss', { toss: toss_struct });
 
   console.log("JS/ result_toss: ");
   console.log(result_toss.Ok);
