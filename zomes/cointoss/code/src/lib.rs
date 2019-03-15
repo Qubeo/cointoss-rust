@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 #![feature(try_from)]
 use std::convert::TryFrom;
 #[macro_use]
@@ -14,10 +15,8 @@ extern crate serde_json;
 extern crate log;
 extern crate multihash;
 
-use std::io;
-use rand::Rng;
-use multihash::{encode, decode, Hash};
-use std::fmt;
+use multihash::{ encode, decode, Hash };
+use std::{ fmt, io, time::{ SystemTime, UNIX_EPOCH }};
 // use snowflake;
 use hdk::{
     // self,
@@ -40,9 +39,9 @@ use hdk::{
 // use hdk::api::AGENT_ADDRESS;
 mod entries;
 mod anchor;
-// mod utils;
+mod pseudorand;
 
-use crate::entries::{CTEntryType, TossSchema, TossResultSchema, SeedSchema, AddrSchema};
+use crate::entries::{ CTEntryType, TossSchema, TossResultSchema, SeedSchema, AddrSchema };
 
 #[derive(Serialize, Deserialize, Debug, DefaultJson, Clone)]
 enum MsgType {
@@ -152,7 +151,7 @@ fn receive_toss_response(toss_response: TossResponseMsg) -> ZomeApiResult<Addres
         initiator_seed_hash: my_seed_hash,
         responder: toss_response.agent_from.clone(),
         responder_seed_hash: responder_seed_hash.clone(),
-        call: 1
+        call: 1 // !!! TODO: Randomize
     };
 
     let toss_result = handle_commit_toss(toss.clone());
@@ -409,12 +408,41 @@ pub fn handle_request_toss(agent_to: Address, seed_value: u8) -> ZomeApiResult<H
     // seed_entry
 }
 
+// TODO: Try making it interactive, connecting it to the UI instead? Or getting it somewhere else "outside"?
 fn generate_seed(salt: String) -> SeedSchema {
-    SeedSchema {
+
+    let seed_value = generate_random();  // TODO: Proper randomizer.
+    let seed = SeedSchema {
         salt: salt,
-        seed_value: 5                   // TODO: Randomize or whatever, this is a temporary hardcode hack.
-    }
+        seed_value
+    };
+    hdk::debug(format!("HCH/ generate_seed(): seed_value: {}", &seed.seed_value));  // Q: Why is this not displayed in output?
+    
+    seed
 }
+
+fn generate_random() -> u8 {
+    // rand::thread_rng().gen::<u8>()
+    (generate_pseudo_random() % 9) as u8
+}
+
+// TODO: Possibly generates only even numbers? :o
+fn generate_pseudo_random() -> u32 {
+    let mut rng = pseudorand::PseudoRand::new(0);    
+    rng.rand_range(0,9) as u32
+}
+
+// Q: Doesn't work. thread_rng as well. Why? WASM stuff? Or?
+// A: Prolly prohibited so as not to break determinism.
+/* fn generate_random_from_nanos() -> u8 {
+    let a = (SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .subsec_nanos() % 9) as u8;
+    
+    hdk::debug(format!("Random seed gen: {}", a));
+    a
+}*/
 
 // TODO: Generate a proper salt!
 fn generate_salt() -> String {
@@ -426,9 +454,11 @@ fn generate_salt() -> String {
 pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
 
     // Commit seed
-    hdk::debug("handle_receive_request(): commiting seed");
+    hdk::debug("HCH/ handle_receive_request(): commiting seed");
     let my_seed = generate_seed("saltpr".to_string());    
     let my_seed_hash = handle_commit_seed(my_seed.clone()).unwrap();        // Q: Better use HashString or Address? (Idiomatic Holochain :) )
+    
+    hdk::debug(format!("HCH/ seed_value: {}", &my_seed.seed_value));
 
     let toss = TossSchema {
         initiator: request.agent_from.clone(),
@@ -437,9 +467,6 @@ pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
         responder_seed_hash: my_seed_hash, // HashString::from(&seed_address[12..58]), // TODO: What a dirty trick. BUG?: Shoots down zome function call when e.g. [14..3]. Should?
         call: 1
     };
-
-    hdk::debug("handle_receive_request(): toss initiator: ");
-    hdk::debug(toss.initiator.clone().to_string());
     
     // Commit toss
     let toss_entry = handle_commit_toss(toss.clone());
@@ -501,18 +528,14 @@ fn handle_commit_seed(seed: SeedSchema) -> ZomeApiResult<Address> {
     // Q: What about multiple plays?
 }
 
-// TODO: Generalize through types - <T>
+// TODO: Generalize through types - <T>? How?
 fn get_seed_hash(seed: SeedSchema) -> ZomeApiResult<HashString> {
-    let seed_entry = Entry::App("seed".into(), seed.into());
-    let seed_hash_generated = hdk::entry_address(&seed_entry);
-    seed_hash_generated
+    hdk::entry_address(&Entry::App("seed".into(), seed.into()))
 }
 
 // Q: Better use reference, or pass the whole struct?
 fn get_toss_hash(toss: TossSchema) -> ZomeApiResult<HashString> {
-    let toss_entry = Entry::App("toss".into(), toss.into());
-    let toss_hash_generated = hdk::entry_address(&toss_entry);
-    toss_hash_generated
+    hdk::entry_address(&Entry::App("toss".into(), toss.into()))
 }
 
 // TODO: Again, implement a version for general types <T>

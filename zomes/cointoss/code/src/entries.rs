@@ -15,7 +15,7 @@
     },
     AGENT_ADDRESS,
 }; */
-
+#![allow(dead_code)]
 use hdk::{
     self,
     entry_definition::{
