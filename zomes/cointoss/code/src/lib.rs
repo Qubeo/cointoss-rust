@@ -410,29 +410,27 @@ pub fn handle_request_toss(agent_to: Address, seed_value: u8) -> ZomeApiResult<H
 
 // TODO: Try making it interactive, connecting it to the UI instead? Or getting it somewhere else "outside"?
 fn generate_seed(salt: String) -> SeedSchema {
-
-    let seed_value = generate_random();  // TODO: Proper randomizer.
-    let seed = SeedSchema {
+    SeedSchema {
         salt: salt,
-        seed_value
-    };
-    hdk::debug(format!("HCH/ generate_seed(): seed_value: {}", &seed.seed_value));  // Q: Why is this not displayed in output?
-    
-    seed
+        seed_value: generate_random_seedval()
+    }
 }
 
-fn generate_random() -> u8 {
+fn generate_random_seedval() -> u8 {
     // rand::thread_rng().gen::<u8>()
     (generate_pseudo_random() % 9) as u8
 }
 
 // TODO: Possibly generates only even numbers? :o
-fn generate_pseudo_random() -> u32 {
-    let mut rng = pseudorand::PseudoRand::new(0);    
-    rng.rand_range(0,9) as u32
+fn generate_pseudo_random() -> usize {
+
+    let ptr = Box::into_raw(Box::new(123));
+    ptr as usize
+    // let mut rng = pseudorand::PseudoRand::new(0);    
+    // rng.rand_range(0, 255) as u32
 }
 
-// Q: Doesn't work. thread_rng as well. Why? WASM stuff? Or?
+// Q: Doesn't work. thread_rng as well.
 // A: Prolly prohibited so as not to break determinism.
 /* fn generate_random_from_nanos() -> u8 {
     let a = (SystemTime::now()
@@ -555,10 +553,7 @@ fn confirm_seed(seed: SeedSchema, seed_hash: HashString) -> ZomeApiResult<bool> 
 fn handle_confirm_toss(toss: TossSchema, toss_hash: HashString) -> ZomeApiResult<u32> {
     
     let toss_hash_generated = get_toss_hash(toss).unwrap();
-    hdk::debug("confirm_toss(): ");
-    hdk::debug(toss_hash.clone());
-    hdk::debug(toss_hash_generated.clone());
-
+    
     // !!! TODO: This - horrible temp. (ZomeApiResult doesn't implement bool.)
     /* Ok( match (toss_hash_generated == toss_hash) {
         true => json!("{ confirmed: true }").into(),
@@ -576,11 +571,8 @@ pub fn handle_commit_toss(toss: TossSchema) -> ZomeApiResult<Address> {
     let toss_address_result = hdk::commit_entry(&toss_entry);
     toss_address_result
 
+    // TODO: Add to toss history.
     // Ok(address) => match hdk::link_entries(&AGENT_ADDRESS, &address, "tosses") {
-    // Ok(address) => json!({ "address": address }).into(),
-    // Err(hdk_err) => { hdk_err.into() }
-    // },
-    // Err(hdk_err) => hdk_err.into()
 }
 
 

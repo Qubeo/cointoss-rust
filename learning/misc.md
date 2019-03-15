@@ -23,7 +23,7 @@ Questions of persistence: persisting e.g. my seed structure? So I can then hash 
 Can I get the agent address from the Conductor in JS? How? Conductor functions in the HDK?
 
 In N2N messaging, how do I, as an agent, know where does the message come from??
-How to decide which logic goes where? (N2N vs. zome calls etc))
+How to decide which logic goes where? (N2N vs. zome calls etc.))
 
 
 **Issues**
