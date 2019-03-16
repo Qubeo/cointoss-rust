@@ -19,7 +19,7 @@ use crate::messaging::{ process_general_msg, process_request_msg, process_toss_r
 // @
 pub fn handle_send_request(agent_to: Address, seed_hash: HashString) -> ZomeApiResult<String> {
     
-    let _debug_res = hdk::debug("hdk::send(): ");
+    let _debug_res = hdk::debug("HCH/ handle_send_request():");
     let msg: RequestMsg = RequestMsg { agent_from: AGENT_ADDRESS.to_string().into(), seed_hash: seed_hash };    
     let send_msg: GeneralMsg = GeneralMsg { agent_from: AGENT_ADDRESS.to_string().into(), message_type: MsgType::RequestToss, message: json!(msg).to_string() };
     // Q: Is this the right way? Or use JsonString by default?
@@ -117,9 +117,7 @@ pub fn generate_salt() -> String {
 
 
 pub fn send_response(agent_to: Address, response_msg: TossResponseMsg) -> ZomeApiResult<String> {
-
-    let _debug_res = hdk::debug("send_response(): ");
-    
+   
     let wrapped_msg = GeneralMsg {
         agent_from: AGENT_ADDRESS.to_string().into(),
         message_type: MsgType::TossResponse,
@@ -127,7 +125,8 @@ pub fn send_response(agent_to: Address, response_msg: TossResponseMsg) -> ZomeAp
     };
 
     let response = hdk::send(agent_to, json!(wrapped_msg).to_string(), 20000.into());
-    let _debug_res = hdk::debug(response.clone());
+    let _debug_res = hdk::debug(format!("HCH/ send_response(): response: {:?}", response.clone()));
+
     response
 }
 
@@ -161,14 +160,11 @@ fn get_toss_hash(toss: TossSchema) -> ZomeApiResult<HashString> {
     hdk::entry_address(&Entry::App("toss".into(), toss.into()))
 }
 
-// TODO: Again, implement a version for general types <T>
+// TODO: Again, perhaps implement a version for general types <T>? Unify result.
 pub fn confirm_seed(seed: SeedSchema, seed_hash: HashString) -> ZomeApiResult<bool> {
-    
-    let seed_hash_generated = get_seed_hash(seed).unwrap();
-    let _debug_res = hdk::debug("confirm_seed(): ");
-    let _debug_res = hdk::debug(seed_hash.clone());
-    let _debug_res = hdk::debug(seed_hash_generated.clone());
 
+    let seed_hash_generated = get_seed_hash(seed).unwrap();
+    let _debug_res = hdk::debug(format!("confirm_seed(): {}, {}", seed_hash.clone(), seed_hash_generated.clone()));
     // TODO: Error handling.
     Ok(seed_hash_generated == seed_hash)
 }
@@ -179,11 +175,7 @@ pub fn handle_confirm_toss(toss: TossSchema, toss_hash: HashString) -> ZomeApiRe
     
     let toss_hash_generated = get_toss_hash(toss).unwrap();
     
-    // !!! TODO: This - horrible temp. (ZomeApiResult doesn't implement bool.)
-    /* Ok( match (toss_hash_generated == toss_hash) {
-        true => json!("{ confirmed: true }").into(),
-        false => json!("{ confirmed: false }").into()
-    }) */
+    // TODO: Unify error handling. (ZomeApiResult doesn't implement bool it seems.)
     Ok((toss_hash_generated == toss_hash) as u32)
 }
 
@@ -205,11 +197,10 @@ pub fn handle_commit_toss(toss: TossSchema) -> ZomeApiResult<Address> {
 pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
 
     // Commit seed
-    let _debug_res = hdk::debug("HCH/ handle_receive_request(): commiting seed");
     let my_seed = generate_seed("saltpr".to_string());    
     let my_seed_hash = handle_commit_seed(my_seed.clone()).unwrap();        // Q: Better use HashString or Address? (Idiomatic Holochain :) )
     
-    let _debug_res = hdk::debug(format!("HCH/ seed_value: {}", &my_seed.seed_value));
+    let _debug_res = hdk::debug(format!("HCH/ handle_receive_request(): seed_value: {}", &my_seed.seed_value));
 
     let toss = TossSchema {
         initiator: request.agent_from.clone(),
@@ -222,8 +213,7 @@ pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
     // Commit toss
     let toss_entry = handle_commit_toss(toss.clone());
 
-    let _debug_res = hdk::debug("handle_receive_request(): toss_entry:");
-    let _debug_res = hdk::debug(toss_entry.clone().unwrap());
+    let _debug_res = hdk::debug(format!("handle_receive_request(): toss_entry: {}", toss_entry.clone().unwrap()));
 
     // Send call / response triplet - responder_seed, toss_hash, call
     // Q: Decomposition. Should be called from here or from some "central" function?
@@ -237,8 +227,8 @@ pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
 
     let send_result = send_response(toss.initiator.clone(), response_msg);
     
-    let _debug_res = hdk::debug("handle_receive_request(): send_response result: ");
-    let _debug_res = hdk::debug(send_result.unwrap());        // Q: Receiving {Ok: {Ok: ___}} construction. How come? Wrapping?
+    let _debug_res = hdk::debug(format!("handle_receive_request(): send_response result: {}", send_result.unwrap()));
+    // Q: Receiving {Ok: {Ok: ___}} construction. How come? Wrapping?
 
     // Q: What now here?
     toss_entry
@@ -262,11 +252,7 @@ fn receive_toss_response(toss_response: TossResponseMsg) -> ZomeApiResult<Addres
 
     let toss_result = handle_commit_toss(toss.clone());
     let toss_addr = toss_result.clone().unwrap();
-    // Q: How to verify the toss is right?
     
-    // TODO: confirm seed, confirm toss, unify the return results.
-
-    // Q: Do I need to do this, or can I just use received hash? Would defy the purpose tho, right?
     // TODO: Confirm / validate seed hash here? Or just store and then - so everyone can see, can't be refuted, if subterfuge?
     // TODO: Persist my seed? Initiator: me, right? What in case of generalizing for more agents?
 
@@ -306,7 +292,6 @@ fn receive_toss_response(toss_response: TossResponseMsg) -> ZomeApiResult<Addres
     toss_result
 }
 
-
 // TODO: Find a better, more general name.
 // Q: What would be the ideal variable to return, according to best practices?
 // Initiator
@@ -314,24 +299,13 @@ fn evaluate_winner(toss_response: TossResponseMsg) -> bool {
 
     // Q: Reveal my seed here?
     let my_seed_addr = read_my_seed_hash().unwrap();
-    let my_seed_result = hdk::get_entry(&my_seed_addr).unwrap();     // Q: Why need to do two unwraps? TODO: Error handling.
-    let _my_seed_entry = my_seed_result.unwrap();
-    
-    // !!! Q: It seems that it allows to somehow fit different type to my SeedSchema?? :o Cause w/ App etc.
-    let my_seed: SeedSchema = hdk::utils::get_as_type::<SeedSchema>(my_seed_addr).unwrap(); // my_seed_entry.content();      // Q: It was neccessary to use hdk::holochain_core_types::cas::content::AddressableContent; Why?
+    // let my_seed_entry = hdk::get_entry(&my_seed_addr).unwrap();   // Q: Why need to do two unwraps? TODO: Error handling.
+    // Q: How not to need to query for my seed again - is that even possible? Persistence? Or do it in one function? Or?
 
-    // TODO: How would an idiomatic way to write this look like?
-    // let my_seed: Entry::App = serde_json::from_str(&Content::from(&my_seed_entry).to_string()).unwrap();
-    // let my_seed = my_seed_entry.// entry::GetEntryResultItem::new(my_seed_entry);
-    // serde_json::from_str(&Content::from(&my_seed_entry).to_string()).unwrap(); // json!(Content::from(my_seed_entry)).into();
+    let my_seed: SeedSchema = hdk::utils::get_as_type::<SeedSchema>(my_seed_addr).unwrap();
     
     let did_responder_win = check_call(my_seed.seed_value, toss_response.responder_seed.seed_value, toss_response.call);
-    // let _debug_res = hdk::debug(RawString::from(Content::from(&my_seed_entry).to_string()));
-
-    // TODO: Convert the entry to the SeedSchema struct. How?
-    // Evaluation: Evaluating whether "call" and "initiator_seed_val + responder_seed_val % 2" have same parity (odd / even)
-
-    // let _debug_res = hdk::debug("HCH/ evaluate_winner(): my_seed.seed_value");    
+    
     let result_formatted = format!("HCH/ evaluate_winner(): initiator seedval: {}, responder seedval: {}, responder call: {}, responder won: {}",
         my_seed.seed_value,
         toss_response.responder_seed.seed_value,
@@ -341,9 +315,6 @@ fn evaluate_winner(toss_response: TossResponseMsg) -> bool {
     let _debug_res = hdk::debug(result_formatted);
 
     did_responder_win
-
-    // OPTIM: How not to need to query for my seed again?
-    // Persistence? Or do it in one function? Or?
 }
 
 // TODO: More fitting name
@@ -371,8 +342,7 @@ fn read_my_seed_hash() -> ZomeApiResult<Address> {
     // As in the original cointoss?
     let my_seed_addrs = hdk::query("seed".into(), 0, 0);
     
-    let _debug_res = hdk::debug("HCH/ read_my_seed_hash()");
-    let _debug_res = hdk::debug(my_seed_addrs.clone());
+    let _debug_res = hdk::debug(format!("HCH/ read_my_seed_hash(): {:?}", my_seed_addrs.clone()));
 
     let addrs = my_seed_addrs.unwrap().clone();
     // TODO: Find out what exactly am I getting here.

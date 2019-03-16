@@ -57,7 +57,7 @@ pub fn process_general_msg(payload: String) -> GeneralMsg {
 
 pub fn process_toss_response_msg(message: String) -> TossResponseMsg {
     // Q: Beware some unhealthy coupling / tangling? (i.e. "process_" function shouldn't commit entries I'd say.)
-    let _debug_res = hdk::debug("process_toss_response_msg()");
+    let _debug_res = hdk::debug("HCH/ process_toss_response_msg()");
     let toss_response_msg: TossResponseMsg = serde_json::from_str(&message).unwrap();
     toss_response_msg
 }

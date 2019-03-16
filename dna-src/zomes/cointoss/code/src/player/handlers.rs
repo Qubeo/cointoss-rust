@@ -49,9 +49,8 @@ pub fn handle_register(name: String) -> ZomeApiResult<Address> {
     // Q: When leaving the ...)?; syntax, there were problems, the handle_register function didn't return properly... or perhaps returned too soon, IDK
     // TODO: Find what exactly does the "?" do.
 
-    let _debug_res = hdk::debug("HCH/ handle_register(): handle_addr");
-    let _debug_res = hdk::debug(handle_addr.clone().unwrap());
-
+    let _debug_res = hdk::debug(format!("HCH/ handle_register(): handle_addr: {:?}", handle_addr.clone().unwrap()));
+    
     // Q: How come in handle_set_handle it works w/o the Ok() wrapping??
     handle_addr
 }
@@ -59,7 +58,6 @@ pub fn handle_register(name: String) -> ZomeApiResult<Address> {
 
 pub fn handle_set_handle(handle_string: String) -> ZomeApiResult<Address> {
 
-    let _debug_res = hdk::debug("handle_set_handle()::_handle: ");
     let handle = HandleSchema { handle: handle_string };
     let handle_entry = Entry::App("handle".into(), handle.clone().into());    
     let handle_address = hdk::commit_entry(&handle_entry);
@@ -72,7 +70,8 @@ pub fn handle_set_handle(handle_string: String) -> ZomeApiResult<Address> {
         // Err(hdk_err) => hdk_err.into()
     }; */    
     // let my_key_entry_address = match hdk::get_entry(hdk::entry_address(&my_key_entry)) {
-    let _debug_res = hdk::debug(handle_address.clone());
+    let _debug_res = hdk::debug(format!("HCH/ handle_set_handle()::_handle: {:?}", handle_address.clone()));
+    
     // Q: Still not completely clear on the error handling.
     handle_address
 }
