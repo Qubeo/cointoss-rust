@@ -379,36 +379,23 @@ pub fn handle_get_agent(_handle: HashString) -> ZomeApiResult<JsonString> {
  */
 pub fn handle_request_toss(agent_to: Address, seed_value: u8) -> ZomeApiResult<HashString> {     // Q: Misleading name? Cause request over N2N?
         
-    // TODO: Body of this function throws "Unable to call zome function" in the HolochainJS for some reason.
-    // !!! TODO: This is the culprit block, causing the above mentioned error.
-    // Yes, the rand statements. Why? No idea. External crate linking? Or some kind of buffer / array error?
-    // TODO: Just a rough random salt and seed. Change to sth more secure.
     let salt = generate_salt();
     
     let seed = SeedSchema {
-        salt: salt, // TODO: randomize - rand::thread_rng().gen_range(0, 10).to_string()?
-        seed_value: seed_value         // Q: Randomize or let user enter thru the UI? rand::thread_rng().gen_range(0, 10)
+        salt: salt, // TODO: randomize.
+        seed_value: seed_value  // Q: Randomize or let user enter thru the UI?
      };
 
     let seed_addr = handle_commit_seed(seed);
 
-    /* let toss = TossSchema {
-        initiator: AGENT_ADDRESS.to_string().into(),
-        initiator_seed_hash: seed_addr,
-        responder: agent_to,
-        responder_seed_hash: 
-    };
-
-    let toss_addr = handle_commit_toss(); */
-
     // Q: Sync chaining vs. async waiting? Fragility vs. composability?
     let received = handle_send_request(agent_to, seed_addr.clone().unwrap());
+    
+    // TODO: What to return here, ideally?
     seed_addr
-
-    // seed_entry
 }
 
-// TODO: Try making it interactive, connecting it to the UI instead? Or getting it somewhere else "outside"?
+// TODO: Try making it interactive, pulling it from th UI instead? Or getting it somewhere else "outside"?
 fn generate_seed(salt: String) -> SeedSchema {
     SeedSchema {
         salt: salt,
@@ -417,32 +404,19 @@ fn generate_seed(salt: String) -> SeedSchema {
 }
 
 fn generate_random_seedval() -> u8 {
-    // rand::thread_rng().gen::<u8>()
     (generate_pseudo_random() % 9) as u8
 }
 
 // TODO: Possibly generates only even numbers? :o
 fn generate_pseudo_random() -> usize {
-
     let ptr = Box::into_raw(Box::new(123));
     ptr as usize
+    // rand::thread_rng().gen::<u8>()
     // let mut rng = pseudorand::PseudoRand::new(0);    
     // rng.rand_range(0, 255) as u32
 }
 
-// Q: Doesn't work. thread_rng as well.
-// A: Prolly prohibited so as not to break determinism.
-/* fn generate_random_from_nanos() -> u8 {
-    let a = (SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .subsec_nanos() % 9) as u8;
-    
-    hdk::debug(format!("Random seed gen: {}", a));
-    a
-}*/
-
-// TODO: Generate a proper salt!
+// TODO: Generate a proper salt.
 fn generate_salt() -> String {
     "[to be randomized string or something]".to_string()
 }
@@ -462,8 +436,8 @@ pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
         initiator: request.agent_from.clone(),
         initiator_seed_hash: request.seed_hash.clone(),
         responder: Address::from(AGENT_ADDRESS.to_string()), // Q: Why can't just use the AGENT_ADDRESS?
-        responder_seed_hash: my_seed_hash, // HashString::from(&seed_address[12..58]), // TODO: What a dirty trick. BUG?: Shoots down zome function call when e.g. [14..3]. Should?
-        call: 1
+        responder_seed_hash: my_seed_hash,
+        call: (generate_pseudo_random() % 2) as u8     // TODO: Randomize
     };
     
     // Commit toss
@@ -617,7 +591,7 @@ define_zome! {
          }
     
     receive: |payload| {
-
+        
         process_received_message(payload).unwrap() // Q: Shoudn't be some kind of async / promise sth? What if blocking?
      }
 

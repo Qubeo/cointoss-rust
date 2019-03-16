@@ -44,6 +44,20 @@ Setting environment values in PSH: $env:MyTestVariable = "My temporary test vari
 Silence the noisy DHT debug logs: $env:HC_N3H_LOG_LEVEL='x' ('x' can be: 't', 'd', 'i', 'v', 'e')
 
 
+// Q: Doesn't work. thread_rng as well.
+// A: Prolly prohibited so as not to break determinism.
+/* fn generate_random_from_nanos() -> u8 {
+    let a = (SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .subsec_nanos() % 9) as u8;
+    
+    hdk::debug(format!("Random seed gen: {}", a));
+    a
+}*/
+
+
+
 **Notes**
 // TODO: Send notification, get the data from the UI.
 // A: send_request
