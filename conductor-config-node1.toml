@@ -5,7 +5,7 @@
 id = "alice"
 name = "Alice"
 public_address = "sandwich--------------------------------------------------------------------------AAAEqzh28L"
-key_file = "john.key"
+key_file = "alice.key"
 
 # Q: Where do I get the agent address before spawning it?
 
@@ -15,7 +15,7 @@ key_file = "john.key"
 [[dnas]]
 id = "cointoss_dna"
 file = "dna-src/dist/dna-src.dna.json"
-hash = "Qm328wyq38924y"
+# hash = "Qm328wyq38924y"
 # Q: Where do I get this?
 
 [[instances]]
@@ -45,7 +45,7 @@ id = "cointoss-rust"
 id = "main"
 root_dir = "./ui"
 hash = "Qm000"
-# ???
+# Q: Where to get the hash?
 
 [[ui_interfaces]]
 id = "ui-interface"
@@ -57,8 +57,8 @@ dna_interface = "websocket_interface"
 
 [network]
 n3h_path = "n3h"
-n3h_persistence_path = "./"
-bootstrap_nodes = ["/ip4/192.168.0.23/tcp/60906/ipfs/QmRVrz1bKU8VCkHLUQJFAsaVUiXYjksGPj6noHvYs43qWf"]
+n3h_persistence_path = "./../../"
+bootstrap_nodes = []
 
 # -----------  Networking instructions  -----------
 

@@ -25,6 +25,10 @@ Can I get the agent address from the Conductor in JS? How? Conductor functions i
 In N2N messaging, how do I, as an agent, know where does the message come from??
 How to decide which logic goes where? (N2N vs. zome calls etc.))
 
+When I break it do
+
+How to properly break the code down - Idiomatic design choices? Do I break Messaging away? Toss and Seed?
+
 
 **Issues**
 Receive callback doesn't receive the sender address. What good are anonymous messages?
@@ -54,7 +58,7 @@ Silence the noisy DHT debug logs: $env:HC_N3H_LOG_LEVEL='x' ('x' can be: 't', 'd
         .unwrap()
         .subsec_nanos() % 9) as u8;
     
-    hdk::debug(format!("Random seed gen: {}", a));
+    let _debug_res = hdk::debug(format!("Random seed gen: {}", a));
     a
 }*/
 
@@ -69,3 +73,16 @@ Silence the noisy DHT debug logs: $env:HC_N3H_LOG_LEVEL='x' ('x' can be: 't', 'd
 
 
 **Resources**
+
+
+**Other bits**
+
+    A source chain is an agent's personal ledger of 'things that happened' (whatever that means for the app they're using -- transactions, temperature readings, messages, etc). It's a hashchain (just like Git trees and blockchains) so any modification to old data breaks the chain and gets noticed. The source chain contains private entries and entries meant to be shared.
+    The DHT in a Holochain app is a Kademlia DHT. (Yes, each app -- and each fork of each app -- has its own DHT.) The difference between it and your typical DHT is that nodes that receive the data also validate it against their own copy of the app's shared validation rules (called the DNA). The things that live in the DHT are:
+        The DNA of the app
+        Each agent's public key
+        The headers of each chain entry from each agent's source chain (the header contains the typical prev/current hash like you'd see in any hash chain, plus the agent's signature and a local timestamp)
+        The data for all public chain entries
+        Links, a special type of chain entry that connects a known piece of data to an unknown piece of data, with a string tag. For instance, you could have a bunch of 'handle' links that link from the app DNA hash, which everybody has, to each member's public key, with the user's handle as the tag.
+        Warrants, a piece of evidence against a bad actor, signed by the validating agent who discovered it
+

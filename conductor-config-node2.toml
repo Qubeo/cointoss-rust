@@ -55,7 +55,7 @@ dna_interface = "websocket_interface"
 
 [network]
 n3h_path = "n3h"
-n3h_persistence_path = "./"
+n3h_persistence_path = "./../../"
 bootstrap_nodes = ["/ip4/192.168.0.23/tcp/60906/ipfs/QmRVrz1bKU8VCkHLUQJFAsaVUiXYjksGPj6noHvYs43qWf"]
 
 # -----------  Networking instructions  -----------
