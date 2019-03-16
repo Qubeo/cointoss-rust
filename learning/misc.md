@@ -38,6 +38,8 @@ Error: "const result_seedhash = container.callRaw("prdelA::./dist/bundle.json", 
 
 TODO: Propose a "formatted" hdk::debug! macro PR?
 
+Non-deterministic error: "Can't get write lock on storage" or sth like that?
+
 
 **Misc learnings, notes**
 Setting environment values in PSH: $env:MyTestVariable = "My temporary test variable."
