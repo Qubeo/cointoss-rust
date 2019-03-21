@@ -17,6 +17,8 @@ Variation ideas:
     
 
 **Questions**
+Validation: To what extent do I need to do explicit validation vs. to what extent can I rely on the "subsconscious" validations?
+
 Questions of persistence: persisting e.g. my seed structure? So I can then hash it to the toss, when receiving the response from B?
     Role of links?
 

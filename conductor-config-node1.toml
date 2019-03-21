@@ -4,7 +4,7 @@
 [[agents]]
 id = "alice"
 name = "Alice"
-public_address = "sandwich--------------------------------------------------------------------------AAAEqzh28L"
+public_address = "HcSCIMW7Wezsfc5qv4a6Bi5GOBwqyzyh9WtBakC8d7k7afo57fHnci78Zwoffgr"
 key_file = "alice.key"
 
 # Q: Where do I get the agent address before spawning it?
@@ -14,8 +14,8 @@ key_file = "alice.key"
 
 [[dnas]]
 id = "cointoss_dna"
-file = "dna-src/dist/dna-src.dna.json"
-# hash = "Qm328wyq38924y"
+file = "dna/cointoss.hcpkg"
+hash = "Qm328wyq38924y"
 # Q: Where do I get this?
 
 [[instances]]
@@ -44,7 +44,7 @@ id = "cointoss-rust"
 [[ui_bundles]]
 id = "main"
 root_dir = "./ui"
-hash = "Qm000"
+# hash = "Qm000"
 # Q: Where to get the hash?
 
 [[ui_interfaces]]

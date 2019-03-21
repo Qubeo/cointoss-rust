@@ -1,82 +1,112 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>holoclient test</title>
+  <title>holochainClient test</title>
   <meta charset="UTF-8"/>
 </head>
 
 <body>
-
   <form id="form">
-    <input type="text" id="message"/>
+    <input type="text" id="message" onclick="init()"/>
     <input type="submit" value="Send" />
   </form>
 
+  <button id="info">Get info</button>
+  <button id="get_address">Get address</button>
+  <button id="register">Register handle</button>
+  <button id="close">Close WS connection</button>
+
   <div id="output"></div>
 
-  <script type="text/javascript" src="holoclient.js"></script>
+  <script type="text/javascript" src="hc-web-client-0.1.2.browser.min.js"></script>
+  <script type="text/javascript" src="hclient-0.1.0.browser.min.js"></script>
 
-  <script type="text/javascript">
-    // const url =  'wss://echo.websocket.org'
-    // const url =  'ws://192.168.1.100:8888/'
-    const url =  'ws://localhost:8888/'
-    const instance =  'test-instance' //'k+XyBjRtywLfXVCRkPfHXMOFbJ9EEmiq4DdMU2AYlGo=' // How do I get the instance?
-    const zome =  'cointoss'
-    const trait = 'main'
-    const fn =   'get_address'
+<script type="text/javascript">
+//const { connect } = require('@holochain/hc-web-client');
+// import { connect } from '@holochain/hc-web-client';
 
-  </script>
+const PORT = 3401;
+const URL = 'ws://localhost:'+PORT+"/";
+
+console.log("init(): prdel");
+window.holochainclient.connect(URL).then(({call, close}) => {
+
+    document.getElementById('form').addEventListener('submit', e => {
+        e.preventDefault();
+
+        // First, get instance info...
+        call('info/instances')().then(info => {
+      
+        console.log("info: ");
+        console.log(info);
+        const instance = getInstance(info, 'QmPow2h5zH8w3sqm9q6PN5sFvQPMpDSBYQ16Xfj8NDfFFa', 'HcSCIMW7Wezsfc5qv4a6Bi5GOBwqyzyh9WtBakC8d7k7afo57fHnci78Zwoffgr');
+      
+        console.log("call(info/instances) { ... }:");
+        console.log(info.instance);
     
-    <div id="heading">
-      <h1>Cointoss!</h1>
-      <h2>A Holochain Sample Application.</h2>
-      <div id="handle_block">Your Handle: <a id="handle" href="#"></a></div>
-    </div>
-    <div class="container">
-      <div class="row">
-        <div class="col-md-4 players">
-          <div class="panel panel-default">
-            <div class="panel-heading">players</div>
-            <div class="panel-body">
-              <ul id="players">
-              </ul>
-            </div>
-          </div>
-          <div class="row" id="req-toss-button-row">
-            <button id="req-toss-button" type="button" class="btn btn-primary">Request Toss</button>
-          </div>
-        </div>
-        <div class="col-md-8">
-          <div class="panel panel-default">
-            <div id="tosses-header" class="panel-heading">Toss History</div>
-            <div class="panel-body">
-              <ul id="tosses">
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="modal fade" id="setHandleDialog" tabindex="-1" role="dialog" aria-labelledby="setHandleModalLabel">
-      <div class="modal-dialog" role="document">
-        <div class="modal-content">
-          <div class="modal-header">
-            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-            <h4 class="modal-title" id="setHandleModalLabel">Set Handle</h4>
-          </div>
-          <div class="modal-body">
-            <form>
-              <div class="form-group">
-                <label for="myHandle">Handle</label>
-                <input type="text" class="form-control" id="myHandle" placeholder="@handle">
-              </div>
-            </form>
-          </div>
-          <div class="modal-footer">
-            <button id="setHandleButton" type="button" class="btn btn-primary">Set Handle</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </body>
+        // const createPost = call(instance, zomeName, functionName)
+        // createPost(params)
+        })
+    })
+
+    document.getElementById('info').addEventListener('click', e => {
+        call('info/instances')().then(data => console.log(data));
+    })
+
+    document.getElementById('register').addEventListener('click', e => {
+        console.log("Register button clicked.");
+        register_handle(call);
+    })
+
+    document.getElementById('get_address').addEventListener('click', e => {
+        console.log("Address button clicked.");
+        get_address(call);
+    })
+
+    document.getElementById('request_toss_btn').addEventListener('click', e => {
+        console.log("request_toss_btn button clicked.");
+        request_toss(call);
+    })
+
+    document.getElementById('close').addEventListener('click', e => {
+        close();
+    })
+})
+
+function get_address(call) {
+
+    //call('admin/dna/get_my_address')({})
+    console.log("in get_my_address()")
+    //const callAddr = call('cointoss-rust', 'cointoss', 'get_my_address')({});
+    let ren = call('cointoss-rust', 'cointoss', 'get_my_address')({});
+    //ren = JSON.parse(ren);
+    console.log(ren);
+}
+
+function request_toss(call) {
+    console.log("request_toss(): ");
+    const request = { agent_to: g_address_bob, seed_value: 12 };
+    const result_request = call('cointoss-rust', 'cointoss', 'request_toss')(request);
+    console.log(result_request);
+}
+
+function register_handle(call) {
+    console.log("register_handle(): ");
+    const handle_alice = { handle: 'prdelice' };
+    const result_alice = call('cointoss-rust', 'cointoss', 'register')(handle_alice);
+    console.log(result_alice);
+}
+
+function getInstance(info, dna, agent) {
+  const entry = Object.entries(info)
+    .find(([id, value]) => value.dna === dna && value.agent === agent)
+  if (entry) {
+    return entry[1].id
+  } else {
+    return null
+  }
+}
+
+</script>
+</body>
 </html>
