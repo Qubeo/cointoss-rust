@@ -5,5 +5,6 @@ node_modules/
 dna-src/zomes/cointoss/code/target
 test/dist
 _old files
+keys/
 
 .hc

@@ -5,7 +5,7 @@
 id = "alice"
 name = "Alice"
 public_address = "HcSCIMW7Wezsfc5qv4a6Bi5GOBwqyzyh9WtBakC8d7k7afo57fHnci78Zwoffgr"
-key_file = "alice.key"
+key_file = "keys/alice.key"
 
 # Q: Where do I get the agent address before spawning it?
 
