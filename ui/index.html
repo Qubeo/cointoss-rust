@@ -14,6 +14,7 @@
   <button id="info">Get info</button>
   <button id="get_address">Get address</button>
   <button id="register">Register handle</button>
+  <button id="request_toss_btn">Request toss</button>
   <button id="close">Close WS connection</button>
 
   <div id="output"></div>
@@ -27,6 +28,8 @@
 
 const PORT = 3401;
 const URL = 'ws://localhost:'+PORT+"/";
+
+const g_address_bob = "HcScI8Rcf6da3Wan9fKkqWwtCgbiitzb9MDV3CeUeXzpr659PO5gO6oFaZ9kuxa";
 
 console.log("init(): prdel");
 window.holochainclient.connect(URL).then(({call, close}) => {
@@ -78,23 +81,25 @@ function get_address(call) {
     //call('admin/dna/get_my_address')({})
     console.log("in get_my_address()")
     //const callAddr = call('cointoss-rust', 'cointoss', 'get_my_address')({});
-    let ren = call('cointoss-rust', 'cointoss', 'get_my_address')({});
-    //ren = JSON.parse(ren);
-    console.log(ren);
+    let ren = call('cointoss-rust', 'cointoss', 'get_my_address')({}).then(
+      result => console.log(result)
+    );
 }
 
 function request_toss(call) {
     console.log("request_toss(): ");
     const request = { agent_to: g_address_bob, seed_value: 12 };
-    const result_request = call('cointoss-rust', 'cointoss', 'request_toss')(request);
-    console.log(result_request);
+    const result_request = call('cointoss-rust', 'cointoss', 'request_toss')(request).then(
+      result => console.log(result)
+    );
 }
 
 function register_handle(call) {
     console.log("register_handle(): ");
     const handle_alice = { handle: 'prdelice' };
-    const result_alice = call('cointoss-rust', 'cointoss', 'register')(handle_alice);
-    console.log(result_alice);
+    const result_alice = call('cointoss-rust', 'cointoss', 'register')(handle_alice).then(
+      result => console.log(result)
+    );
 }
 
 function getInstance(info, dna, agent) {
