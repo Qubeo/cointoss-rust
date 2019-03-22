@@ -6,16 +6,25 @@
 </head>
 
 <body>
-  <form id="form">
-    <input type="text" id="message" onclick="init()"/>
-    <input type="submit" value="Send" />
-  </form>
+  <h2>Coin-toss</h2>
+  <strong>yada da bla</strong><br/><br/>
+
+  <strong>Register your handle first:</strong><br/>
+  <button id="register">Register handle</button></br><br/><br/>
+
+  <strong>Your toss seed:</strong><br/>
+  <input type="text" id="seed_input" value="7" style="width:64px"/>
+  <button id="request_toss_btn">Request toss</button><br/>
 
   <button id="info">Get info</button>
   <button id="get_address">Get address</button>
-  <button id="register">Register handle</button>
-  <button id="request_toss_btn">Request toss</button>
-  <button id="close">Close WS connection</button>
+  <button id="close">Close WS connection</button><br/><br/></br>
+
+  <form id="form">
+      Send message:<br/>
+      <input type="text" id="message"/><br/>
+      <input type="submit" value="Send" />
+    </form>
 
   <div id="output"></div>
 
@@ -42,6 +51,8 @@ window.holochainclient.connect(URL).then(({call, close}) => {
       
         console.log("info: ");
         console.log(info);
+
+        // Q: Is this right? It works, but...
         const instance = getInstance(info, 'QmPow2h5zH8w3sqm9q6PN5sFvQPMpDSBYQ16Xfj8NDfFFa', 'HcSCIMW7Wezsfc5qv4a6Bi5GOBwqyzyh9WtBakC8d7k7afo57fHnci78Zwoffgr');
       
         console.log("call(info/instances) { ... }:");
@@ -88,10 +99,26 @@ function get_address(call) {
 
 function request_toss(call) {
     console.log("request_toss(): ");
-    const request = { agent_to: g_address_bob, seed_value: 12 };
-    const result_request = call('cointoss-rust', 'cointoss', 'request_toss')(request).then(
-      result => console.log(result)
-    );
+    const seed_value = parseInt(document.getElementById('seed_input').value);
+    const request = { agent_to: g_address_bob, seed_value: seed_value };
+    const result_request = call('cointoss-rust', 'cointoss', 'request_toss')(request).then(result => {
+        console.log(result);
+    
+        // Output the toss outcome.
+        let output_div = document.getElementById('output');
+        let outcome = 1; // TODO: Extract from the toss result.
+
+        if (outcome == 1) {
+          output_div.innerText = "You won - your opponent tossed Y.";
+        } else if (outcome == 0) {
+          output_div.innerText = "You lost - your opponent tossed Y. ";
+        } else if (outcome == 2) {
+         output_div = "It's a draw.";
+        }
+        else {
+          output_div = "Error or what?";
+        }
+    });
 }
 
 function register_handle(call) {

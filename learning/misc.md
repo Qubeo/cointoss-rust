@@ -46,6 +46,14 @@ TODO: Propose a "formatted" hdk::debug! macro PR?
 
 Non-deterministic error: "Can't get write lock on storage" or sth like that?
 
+Networking:
+"About to serve path "./ui2" at http://127.0.0.1:3002
+Server started for "ui-interface"
+thread '<unnamed>' panicked at 'error binding to 127.0.0.1:3002: error creating server listener: Normálně je povoleno pouze jedno použití každé adresy (protokolu, síťové adresy, portu) soketu. (os error 10048)', C:\Users\travis\.cargo\registry\src\github.com-1ecc6299db9ec823\hyper-0.12.25\src\server\mod.rs:115:17
+note: Run with `RUST_BACKTRACE=1` environment variable to display a backtrace.
+2019-03-22 17:04:52:conductor: err/conductor: Error running interface 'websocket_interface': Io Error: Normálně je povoleno pouze jedno použití každé adresy (protokolu, síťové adresy, portu) soketu. (os error 10048)"
+But then the N2N communication works. What's wrong?
+
 
 **Misc learnings, notes**
 Setting environment values in PSH: $env:MyTestVariable = "My temporary test variable."
