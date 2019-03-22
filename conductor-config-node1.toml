@@ -85,7 +85,7 @@ exclude = false
 pattern = "^debug/dna"
 
 [[logger.rules.rules]]
-exclude = true
+exclude = false
 pattern = "^debug/reduce"
 
 [[logger.rules.rules]]
