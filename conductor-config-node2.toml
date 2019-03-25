@@ -56,7 +56,7 @@ dna_interface = "websocket_interface"
 [network]
 n3h_path = "n3h"
 n3h_persistence_path = "./../../"
-bootstrap_nodes = ["wss://192.168.100.111:53033/?a=HcSCIceUX5EZ4xdzepJ7bCcRT8Ozy6fhiHqbhEK984Cyoi939M9K5pm93XKXpui"]
+bootstrap_nodes = ["wss://10.0.0.17:50115/?a=HcSciNh98AkRdq5hd96fpfTmVs8rd596r7Hp6nmNT3zp93fnM9RVrfdu8ea5c5a"]
 
 # -----------  Networking instructions  -----------
 
@@ -67,8 +67,6 @@ bootstrap_nodes = ["wss://192.168.100.111:53033/?a=HcSCIceUX5EZ4xdzepJ7bCcRT8Ozy
 #	begins with `READY! tcp://127.0.0.1:43859 [...]
 #	You will need to copy the contents of the array and send it to the nodes you plan to network with.
 # - If you are a joining node then paste the contents from the first node in to the bootstrap_nodes field above
-
-
 
 [logger]
 type = "debug"
