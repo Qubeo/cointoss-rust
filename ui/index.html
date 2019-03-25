@@ -38,7 +38,7 @@
 const PORT = 3401;
 const URL = 'ws://localhost:'+PORT+"/";
 
-const g_address_bob = "HcScI8Rcf6da3Wan9fKkqWwtCgbiitzb9MDV3CeUeXzpr659PO5gO6oFaZ9kuxa";
+const g_address_responder = "HcScI8Rcf6da3Wan9fKkqWwtCgbiitzb9MDV3CeUeXzpr659PO5gO6oFaZ9kuxa";
 
 console.log("init(): prdel");
 window.holochainclient.connect(URL).then(({call, close}) => {
@@ -100,7 +100,7 @@ function get_address(call) {
 function request_toss(call) {
     console.log("request_toss(): ");
     const seed_value = parseInt(document.getElementById('seed_input').value);
-    const request = { agent_to: g_address_bob, seed_value: seed_value };
+    const request = { agent_to: g_address_responder, seed_value: seed_value };
     const result_request = call('cointoss-rust', 'cointoss', 'request_toss')(request).then(result => {
         console.log(result);
     
@@ -111,7 +111,7 @@ function request_toss(call) {
         if (outcome == 1) {
           output_div.innerText = "You won - your opponent tossed Y.";
         } else if (outcome == 0) {
-          output_div.innerText = "You lost - your opponent tossed Y. ";
+          output_div.innerText = "You lost - your opponent tossed Y.";
         } else if (outcome == 2) {
          output_div = "It's a draw.";
         }

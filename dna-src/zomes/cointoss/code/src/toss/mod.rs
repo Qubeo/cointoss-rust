@@ -13,6 +13,12 @@ use hdk::{
     }
 };
 
+#[derive(Serialize, Deserialize, Debug, DefaultJson, Clone)]
+pub enum TossOutcome {
+    InitiatorWon,
+    InitiatorLost,
+    Draw
+}
 
 #[derive(Serialize, Deserialize, Debug, DefaultJson, Clone)]
 pub struct TossSchema {
@@ -27,9 +33,16 @@ pub struct TossSchema {
 #[derive(Serialize, Deserialize, Debug, DefaultJson)]
 pub struct TossResultSchema {
     pub toss: TossSchema,       
-	pub result: String,         // Q: What format?
+	pub outcome: TossOutcome,         // Q: What format?
     pub time_stamp: String
     // pub required:  ["toss","result","time_stamp"] // Q: Validation rules?
+}
+
+// Q: Is this useful?
+#[derive(Serialize, Deserialize, Debug, DefaultJson)]
+pub struct ResultAndRevealedSchema {
+    pub toss_result: TossResultSchema,
+    pub initiator_seed: SeedSchema
 }
 
 #[derive(Serialize, Deserialize, Debug, DefaultJson, Clone)]

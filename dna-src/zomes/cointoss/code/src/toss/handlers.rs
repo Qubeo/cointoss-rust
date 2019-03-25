@@ -9,7 +9,7 @@ use hdk::holochain_core_types::{
 };
 
 // Q: Do I need to do this?
-use crate::toss::{ TossSchema, SeedSchema, TossResultSchema };
+use crate::toss::{ TossSchema, SeedSchema, TossResultSchema, TossOutcome, ResultAndRevealedSchema };
 use crate::messaging::{ MsgType, TossResponseMsg, GeneralMsg, RequestMsg };
 use crate::messaging::{ process_general_msg, process_request_msg, process_toss_response_msg };
 
@@ -101,7 +101,7 @@ pub fn generate_random_seedval() -> u8 {
     (generate_pseudo_random() % 9) as u8
 }
 
-// TODO: Possibly generates only even numbers? :o
+// TODO: Placeholder. Also, possibly generates only even numbers.
 pub fn generate_pseudo_random() -> usize {
     let ptr = Box::into_raw(Box::new(123));
     ptr as usize
@@ -235,7 +235,7 @@ pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
 }
 
 
-fn receive_toss_response(toss_response: TossResponseMsg) -> ZomeApiResult<Address> {
+fn receive_toss_response(toss_response: TossResponseMsg) -> ZomeApiResult<ResultAndRevealedSchema> {
     
     // TODO: Read my seed hash from my chain. Or?
     // TODO: Unify nomenclature reference point - my vs. initiator.
@@ -250,8 +250,8 @@ fn receive_toss_response(toss_response: TossResponseMsg) -> ZomeApiResult<Addres
         call: 1 // !!! TODO: Randomize
     };
 
-    let toss_result = handle_commit_toss(toss.clone());
-    let toss_addr = toss_result.clone().unwrap();
+    let toss_entry_result = handle_commit_toss(toss.clone());
+    let toss_addr = toss_entry_result.clone().unwrap();
     
     // TODO: Confirm / validate seed hash here? Or just store and then - so everyone can see, can't be refuted, if subterfuge?
     // TODO: Persist my seed? Initiator: me, right? What in case of generalizing for more agents?
@@ -287,15 +287,36 @@ fn receive_toss_response(toss_response: TossResponseMsg) -> ZomeApiResult<Addres
     };
 
     // Learning: Can I tell what I need to know to do the eval, from the top of my head? No? Then I don't have it modelled properly yet.
-    evaluate_winner(toss_response);
 
-    toss_result
+    // Q: Where does this belong, in terms of best practices?
+
+    let (outcome, my_seed) = evaluate_winner_and_reveal(toss_response);
+
+    // TODO: Do both commit the toss result?
+    // commit_toss_result();
+
+    let toss_result: TossResultSchema = TossResultSchema {
+        toss,
+        outcome,
+        time_stamp: "[to be implemented]".to_string()
+    };
+
+    let outcome_and_revealed = ResultAndRevealedSchema {
+        toss_result,
+        initiator_seed: my_seed        
+    };
+
+    Ok(outcome_and_revealed)
+
 }
+
+// TODO: Somehow distinguish which functions can be called by what "role"?
+// I.e. when I'm an initiator, I'm inhabiting the "initiator" role, hence such capabilities?
 
 // TODO: Find a better, more general name.
 // Q: What would be the ideal variable to return, according to best practices?
 // Initiator
-fn evaluate_winner(toss_response: TossResponseMsg) -> bool {
+fn evaluate_winner_and_reveal(toss_response: TossResponseMsg) -> (TossOutcome, SeedSchema) {
 
     // Q: Reveal my seed here?
     let my_seed_addr = read_my_seed_hash().unwrap();
@@ -304,26 +325,33 @@ fn evaluate_winner(toss_response: TossResponseMsg) -> bool {
 
     let my_seed: SeedSchema = hdk::utils::get_as_type::<SeedSchema>(my_seed_addr).unwrap();
     
-    let did_responder_win = check_call(my_seed.seed_value, toss_response.responder_seed.seed_value, toss_response.call);
-    
-    let result_formatted = format!("HCH/ evaluate_winner(): initiator seedval: {}, responder seedval: {}, responder call: {}, responder won: {}",
+    // TODO: Refactor. 
+    let did_initiator_win = compute_outcome_for_initiator(my_seed.seed_value, toss_response.responder_seed.seed_value, toss_response.call);
+ 
+    let result_formatted = format!("HCH/ evaluate_winner_and_reveal(): initiator seedval: {}, responder seedval: {}, responder call: {}, responder won: {:?}",
         my_seed.seed_value,
         toss_response.responder_seed.seed_value,
         toss_response.call,
-        did_responder_win);
+        did_initiator_win);
 
     let _debug_res = hdk::debug(result_formatted);
 
-    did_responder_win
+    (did_initiator_win, my_seed)
 }
 
+
+
+// TODO: Possibility of automatic multiple tossing if draw?
+
 // TODO: More fitting name
-fn check_call(initiator_seed_value: u8, responder_seed_value: u8, responder_call: u8) -> bool {
-    if (initiator_seed_value + responder_seed_value) % 2 == responder_call {
-        true
+fn compute_outcome_for_initiator(initiator_seed_value: u8, responder_seed_value: u8, responder_call: u8) -> TossOutcome {
+    let flipped_call = (initiator_seed_value + responder_seed_value) % 2;
+    
+    if flipped_call == responder_call {
+        TossOutcome::InitiatorLost
     }
     else {
-        false
+        TossOutcome::InitiatorWon
     }
 }
 
