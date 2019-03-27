@@ -83,6 +83,8 @@ pub fn handle_request_toss(agent_to: Address, seed_value: u8) -> ZomeApiResult<H
 
     // Q: Sync chaining vs. async waiting? Fragility vs. composability?
     let _received = handle_send_request(agent_to, seed_addr.clone().unwrap());
+
+    hdk::debug(format!("HCH/ handle_request_toss(): received: {:?}", _received));
     
     // TODO: What to return here, ideally?
     seed_addr
@@ -95,6 +97,11 @@ pub fn generate_seed(salt: String) -> SeedSchema {
         salt: salt,
         seed_value: generate_random_seedval()
     }
+}
+
+pub fn reveal_seed(seed_addr: Address) -> ZomeApiResult<SeedSchema> {
+    // Q: Some validation that it's okay to ask for seed revelation?
+    hdk::utils::get_as_type::<SeedSchema>(seed_addr).unwrap()
 }
 
 pub fn generate_random_seedval() -> u8 {
@@ -301,6 +308,8 @@ fn receive_toss_response(toss_response: TossResponseMsg) -> ZomeApiResult<Result
         time_stamp: "[to be implemented]".to_string()
     };
 
+    // TODO: This is probably redundant and doesn't respect concern separation that much.
+    // Figure out how to pass the revealed seed back to the UI.
     let outcome_and_revealed = ResultAndRevealedSchema {
         toss_result,
         initiator_seed: my_seed        
@@ -319,11 +328,11 @@ fn receive_toss_response(toss_response: TossResponseMsg) -> ZomeApiResult<Result
 fn evaluate_winner_and_reveal(toss_response: TossResponseMsg) -> (TossOutcome, SeedSchema) {
 
     // Q: Reveal my seed here?
-    let my_seed_addr = read_my_seed_hash().unwrap();
+    let my_seed_addr = read_my_seed_hash().unwrap();    
+    let my_seed = reveal_seed(read_my_seed_hash().unwrap());
+    
     // let my_seed_entry = hdk::get_entry(&my_seed_addr).unwrap();   // Q: Why need to do two unwraps? TODO: Error handling.
     // Q: How not to need to query for my seed again - is that even possible? Persistence? Or do it in one function? Or?
-
-    let my_seed: SeedSchema = hdk::utils::get_as_type::<SeedSchema>(my_seed_addr).unwrap();
     
     // TODO: Refactor. 
     let did_initiator_win = compute_outcome_for_initiator(my_seed.seed_value, toss_response.responder_seed.seed_value, toss_response.call);
