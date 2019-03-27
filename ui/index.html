@@ -109,19 +109,23 @@ function request_toss(call) {
         // Output the toss outcome.
         let output_div = document.getElementById('output');
 
-        console.log(result.Ok)
-        let outcome = 1; // TODO: Extract from the toss result.
+        const result_reveal = call('cointoss-rust', 'cointoss', 'reveal_outcome')(result).then(outcome_result => {
+          console.log(outcome_result);
 
-        if (outcome == 1) {
-          output_div.innerText = "You won - your opponent tossed Y. Tossed: " + result;
-        } else if (outcome == 0) {
-          output_div.innerText = "You lost - your opponent tossed Y. Tossed: " + result;
-        } else if (outcome == 2) {
-         output_div = "It's a draw.";
-        }
-        else {
-          output_div = "Error or what?";
-        }
+      
+          let outcome = 1; // TODO: Extract from the toss result.
+
+          if (outcome == 1) {
+            output_div.innerText = "You won - your opponent tossed Y. Tossed: " + result;
+          } else if (outcome == 0) {
+            output_div.innerText = "You lost - your opponent tossed Y. Tossed: " + result;
+          } else if (outcome == 2) {
+           output_div = "It's a draw.";
+          }
+          else {
+            output_div = "Error or what?";
+          }
+        });
     });
 }
 

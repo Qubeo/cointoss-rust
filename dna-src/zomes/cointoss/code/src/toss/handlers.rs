@@ -82,6 +82,7 @@ pub fn handle_request_toss(agent_to: Address, seed_value: u8) -> ZomeApiResult<H
     let seed_addr = handle_commit_seed(seed);
 
     // Q: Sync chaining vs. async waiting? Fragility vs. composability?
+    // Callback? Future?
     let _received = handle_send_request(agent_to, seed_addr.clone().unwrap());
 
     hdk::debug(format!("HCH/ handle_request_toss(): received: {:?}", _received));
@@ -102,6 +103,10 @@ pub fn generate_seed(salt: String) -> SeedSchema {
 pub fn reveal_seed(seed_addr: Address) -> ZomeApiResult<SeedSchema> {
     // Q: Some validation that it's okay to ask for seed revelation?
     hdk::utils::get_as_type::<SeedSchema>(seed_addr).unwrap()
+}
+
+pub fn reveal_outcome(outcome_revealed_addr: Address) -> ZomeApiResult<ResultAndRevealedSchema> {
+    hdk::utils::get_as_type::<ResultAndRevealedSchema>(outcome_revealed_addr).unwrap()
 }
 
 pub fn generate_random_seedval() -> u8 {
