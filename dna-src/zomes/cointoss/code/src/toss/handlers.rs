@@ -320,6 +320,12 @@ fn receive_toss_response(toss_response: TossResponseMsg) -> ZomeApiResult<Result
         initiator_seed: my_seed        
     };
 
+    // Add the result to history
+    // Q: Does only one player, the initiator store it? Or?
+    let toss_result_entry = Entry::App("toss_result".into(), toss_result.into());
+    let toss_result_address = hdk::commit_entry(&toss_result_entry);
+    let _link_res = hdk::link_entries(&AGENT_ADDRESS, &toss_result_address.clone().unwrap(), "toss_results");
+
     Ok(outcome_and_revealed)
 
 }
@@ -349,6 +355,8 @@ fn evaluate_winner_and_reveal(toss_response: TossResponseMsg) -> (TossOutcome, S
         did_initiator_win);
 
     let _debug_res = hdk::debug(result_formatted);
+
+
 
     (did_initiator_win, my_seed)
 }
