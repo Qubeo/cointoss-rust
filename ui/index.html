@@ -109,7 +109,7 @@ function request_toss(call) {
         // Output the toss outcome.
         let output_div = document.getElementById('output');
 
-        const result_reveal = call('cointoss-rust', 'cointoss', 'reveal_outcome')(result).then(outcome_result => {
+        const result_reveal = call('cointoss-rust', 'cointoss', 'reveal_toss_result')(result).then(outcome_result => {
           console.log(outcome_result);
 
       

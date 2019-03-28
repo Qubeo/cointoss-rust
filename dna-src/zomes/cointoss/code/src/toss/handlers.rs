@@ -109,6 +109,10 @@ pub fn reveal_outcome(outcome_revealed_addr: Address) -> ZomeApiResult<ResultAnd
     hdk::utils::get_as_type::<ResultAndRevealedSchema>(outcome_revealed_addr).unwrap()
 }
 
+pub fn reveal_toss_result(toss_result_addr: Address) -> ZomeApiResult<TossResultSchema> {
+    hdk::utils::get_as_type::<TossResultSchema>(toss_result_addr).unwrap()
+}
+
 pub fn generate_random_seedval() -> u8 {
     (generate_pseudo_random() % 9) as u8
 }
@@ -326,7 +330,8 @@ fn receive_toss_response(toss_response: TossResponseMsg) -> ZomeApiResult<Result
     let toss_result_address = hdk::commit_entry(&toss_result_entry);
     let _link_res = hdk::link_entries(&AGENT_ADDRESS, &toss_result_address.clone().unwrap(), "toss_results");
 
-    Ok(outcome_and_revealed)
+    // Ok(outcome_and_revealed)
+    toss_result_address
 
 }
 
