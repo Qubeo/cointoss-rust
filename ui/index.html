@@ -137,6 +137,14 @@ function register_handle(call) {
     );
 }
 
+function register_handle(call) {
+    console.log("register_handle(): ");
+    const handle_alice = { handle: 'prdelice' };
+    const result_alice = call('cointoss-rust', 'cointoss', 'register')(handle_alice).then(
+      result => console.log(result)
+    );
+}
+
 function getInstance(info, dna, agent) {
   const entry = Object.entries(info)
     .find(([id, value]) => value.dna === dna && value.agent === agent)
