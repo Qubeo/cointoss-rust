@@ -109,7 +109,7 @@ function request_toss(call) {
         // Output the toss outcome.
         let output_div = document.getElementById('output');
 
-        const result_reveal = call('cointoss-rust', 'cointoss', 'reveal_toss_result')(result).then(outcome_result => {
+        const result_reveal = call('cointoss-rust', 'cointoss', 'reveal_toss_result')({}).then(outcome_result => {
           console.log(outcome_result);
 
       
@@ -127,14 +127,6 @@ function request_toss(call) {
           }
         });
     });
-}
-
-function register_handle(call) {
-    console.log("register_handle(): ");
-    const handle_alice = { handle: 'prdelice' };
-    const result_alice = call('cointoss-rust', 'cointoss', 'register')(handle_alice).then(
-      result => console.log(result)
-    );
 }
 
 function register_handle(call) {

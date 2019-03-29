@@ -30,7 +30,7 @@ pub struct TossSchema {
     // pub required: ["initiator", "initiator_seed_hash", "responder", "responder_seed_hash"]; // Q: How to initialize the field?
 }
 
-#[derive(Serialize, Deserialize, Debug, DefaultJson)]
+#[derive(Serialize, Deserialize, Debug, DefaultJson, Clone)]
 pub struct TossResultSchema {
     pub toss: TossSchema,       
 	pub outcome: TossOutcome,         // Q: What format?

@@ -85,7 +85,7 @@ pub fn handle_request_toss(agent_to: Address, seed_value: u8) -> ZomeApiResult<H
     // Callback? Future?
     let _received = handle_send_request(agent_to, seed_addr.clone().unwrap());
 
-    hdk::debug(format!("HCH/ handle_request_toss(): received: {:?}", _received));
+    let _debug_res = hdk::debug(format!("HCH/ handle_request_toss(): received: {:?}", _received));
     
     // TODO: What to return here, ideally?
     seed_addr
@@ -102,15 +102,15 @@ pub fn generate_seed(salt: String) -> SeedSchema {
 
 pub fn reveal_seed(seed_addr: Address) -> ZomeApiResult<SeedSchema> {
     // Q: Some validation that it's okay to ask for seed revelation?
-    hdk::utils::get_as_type::<SeedSchema>(seed_addr).unwrap()
+    hdk::utils::get_as_type::<SeedSchema>(seed_addr)
 }
 
 pub fn reveal_outcome(outcome_revealed_addr: Address) -> ZomeApiResult<ResultAndRevealedSchema> {
-    hdk::utils::get_as_type::<ResultAndRevealedSchema>(outcome_revealed_addr).unwrap()
+    hdk::utils::get_as_type::<ResultAndRevealedSchema>(outcome_revealed_addr)
 }
 
-pub fn reveal_toss_result(toss_result_addr: Address) -> ZomeApiResult<TossResultSchema> {
-    hdk::utils::get_as_type::<TossResultSchema>(toss_result_addr).unwrap()
+pub fn handle_reveal_toss_result(toss_result_addr: Address) -> ZomeApiResult<TossResultSchema> {
+    hdk::utils::get_as_type::<TossResultSchema>(toss_result_addr)
 }
 
 pub fn generate_random_seedval() -> u8 {
@@ -251,7 +251,7 @@ pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
 }
 
 
-fn receive_toss_response(toss_response: TossResponseMsg) -> ZomeApiResult<ResultAndRevealedSchema> {
+fn receive_toss_response(toss_response: TossResponseMsg) -> ZomeApiResult<Address> {
     
     // TODO: Read my seed hash from my chain. Or?
     // TODO: Unify nomenclature reference point - my vs. initiator.
@@ -320,7 +320,7 @@ fn receive_toss_response(toss_response: TossResponseMsg) -> ZomeApiResult<Result
     // TODO: This is probably redundant and doesn't respect concern separation that much.
     // Figure out how to pass the revealed seed back to the UI.
     let outcome_and_revealed = ResultAndRevealedSchema {
-        toss_result,
+        toss_result: toss_result.clone(),
         initiator_seed: my_seed        
     };
 
@@ -345,7 +345,7 @@ fn evaluate_winner_and_reveal(toss_response: TossResponseMsg) -> (TossOutcome, S
 
     // Q: Reveal my seed here?
     let my_seed_addr = read_my_seed_hash().unwrap();    
-    let my_seed = reveal_seed(read_my_seed_hash().unwrap());
+    let my_seed = reveal_seed(read_my_seed_hash().unwrap()).unwrap();
     
     // let my_seed_entry = hdk::get_entry(&my_seed_addr).unwrap();   // Q: Why need to do two unwraps? TODO: Error handling.
     // Q: How not to need to query for my seed again - is that even possible? Persistence? Or do it in one function? Or?
