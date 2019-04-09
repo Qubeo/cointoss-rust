@@ -50,7 +50,7 @@ scenario.runTape('Can get address of both players', async (t, {alice, bob}) => {
 //});
 
 
-//test('Call the set_handle() function, expect entry address as a result', async (test) => {
+/*//test('Call the set_handle() function, expect entry address as a result', async (test) => {
 //scenario.runTape('Call the set_handle() function, expect entry address as a result', async (t, {alice, bob}) => {
 console.log("//*************** 'Call the set_handle() function, expect entry address as a result'");
 
@@ -69,7 +69,7 @@ console.log("//*************** 'Call the set_handle() function, expect entry add
   // g_address_bob = result_bob.Ok;
   // test.end();
 
-//});
+//}); */
 
 
 // test('Initiate a toss by calling request_toss()', async (t) => {
@@ -88,6 +88,7 @@ console.log("//*************** 'Call the set_handle() function, expect entry add
 
 // Q: Spinning up new instances for each scenario might break the addressess -> into one scenario?
 
+/*
 console.log("//********************* 'Agent A/ Send the seed hash through N3H'");
 //scenario.runTape('Agent A/ Send the seed hash through N3H', async (t, {alice, bob}) => {
 // test('Agent A/ Send the seed hash through N3H', async (t) => {
@@ -129,6 +130,22 @@ console.log("//************************* Agent B Commit the toss");
   //t.deepEqual(result_toss.Ok.length, 46);
   g_toss_hash_b = result_toss.Ok;
 
+// });
+*/
+
+// test('Initiate a toss by calling request_toss()', async (t) => {
+//scenario.runTape('Retrieve the toss result', async (t, {alice}) => {
+ console.log("//**************** 'Initiate a toss by calling request_toss()'");
+
+  // !!! TODO: Beware, misleading naming. It's not a seed has, but a result address (?).
+  const toss_outcome_request = { toss_result_addr: g_seed_hash_a };
+  const outcome_result = await alice.call('cointoss', 'reveal_toss_result', toss_outcome_request);
+  console.log("JS/ result_request:")
+  console.log(outcome_result);
+
+  // t.deepEqual(result_request.Ok.length, 46);
+  // g_seed_hash_a = result_request.Ok;
+  // t.end();
 });
 
   /*

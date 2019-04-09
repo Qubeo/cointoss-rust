@@ -4,7 +4,7 @@ use hdk::AGENT_ADDRESS;
 use hdk::holochain_core_types::{
     hash::HashString,
     entry::Entry,
-    cas::content::Address,
+    cas::content::Address, cas::content::AddressableContent,
     json::{ JsonString },
 };
 
@@ -12,6 +12,16 @@ use hdk::holochain_core_types::{
 use crate::toss::{ TossSchema, SeedSchema, TossResultSchema, TossOutcome, ResultAndRevealedSchema };
 use crate::messaging::{ MsgType, TossResponseMsg, GeneralMsg, RequestMsg };
 use crate::messaging::{ process_general_msg, process_request_msg, process_toss_response_msg };
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct GetLinksLoadElement<T> {
+	pub address: HashString,
+	pub entry: T
+}
+
+pub type GetLinksLoadResult<T> = Vec<GetLinksLoadElement<T>>;
+
+ZomeApiResult<utils::GetLinksLoadResult<Event>>
 
 
 // @ ----------------------------------------------------------------------------------------------
@@ -110,7 +120,21 @@ pub fn reveal_outcome(outcome_revealed_addr: Address) -> ZomeApiResult<ResultAnd
 }
 
 pub fn handle_reveal_toss_result(toss_result_addr: Address) -> ZomeApiResult<TossResultSchema> {
-    hdk::utils::get_as_type::<TossResultSchema>(toss_result_addr)
+    let toss_result_str = "toss_result";
+    let _debug_res = hdk::debug(format!("HCH/ reveal_toss_result(): toss_result_addr: {}", toss_result_addr.clone()));
+    // let get_result = hdk::utils::get_as_type::<TossResultSchema>(toss_result_addr.clone());
+
+    // Q: Why need to specify the S: String type parameter? How is the "toss_result" entry type relevant - why not needed here?
+    let get_result = hdk::get_links_and_load(&AGENT_ADDRESS, "toss_results").unwrap();
+    // let get_result = hdk::utils::get_links_and_load_type::<String, TossResultSchema>(&AGENT_ADDRESS.to_string().into(), "toss_results".to_string()).unwrap();
+    let _debug_res = hdk::debug(format!("HCH/ reveal_toss_result(): {:?}", get_result.clone()));
+
+    // Q: Is the index 0 the right index (cause stack) or not (cause queue)?
+    // Q: What exactly am I cloning / should I be cloning / should be cloning at all, vs. borrow / reference?
+    let element_addr = get_result[0].clone().unwrap().address();
+    let got_element = hdk::utils::get_as_type::<TossResultSchema>(element_addr);
+
+    Ok(got_element.unwrap())
 }
 
 pub fn generate_random_seedval() -> u8 {
@@ -244,7 +268,7 @@ pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
     let send_result = send_response(toss.initiator.clone(), response_msg);
     
     let _debug_res = hdk::debug(format!("handle_receive_request(): send_response result: {}", send_result.unwrap()));
-    // Q: Receiving {Ok: {Ok: ___}} construction. How come? Wrapping?
+    // Q: Receiving {Ok: {Ok: ___ }} construction. How come? Wrapping?
 
     // Q: What now here?
     toss_entry

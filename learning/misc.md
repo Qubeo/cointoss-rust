@@ -17,6 +17,9 @@ Variation ideas:
     
 
 **Questions**
+Links: The link definitions in the zome function vs. LinkEntries? The zome: a validation blueprint, template of what's possible?
+LinkEntries just carrying it out then? Simila to commit?
+
 Validation: To what extent do I need to do explicit validation vs. to what extent can I rely on the "subsconscious" validations?
 
 Questions of persistence: persisting e.g. my seed structure? So I can then hash it to the toss, when receiving the response from B?

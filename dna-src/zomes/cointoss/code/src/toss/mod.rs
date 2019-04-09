@@ -100,7 +100,19 @@ pub fn toss_result_definition() -> ValidatingEntryType {
         validation_package: || { 
             hdk::ValidationPackageDefinition::Entry
         },
-        validation: |_toss_result: TossResultSchema, _validation_data: hdk::ValidationData| { Ok(()) }
+        validation: |_toss_result: TossResultSchema, _validation_data: hdk::ValidationData| { Ok(()) },
+        // Q: What exactly is this for? Where and when exactly does it get to operate?
+        links: [
+            from!(
+                "%agent_id",
+                tag: "agent",
+                validation_package: || {
+                    hdk::ValidationPackageDefinition::ChainFull
+                },
+                validation: |_source: Address, _target: Address, _validation_data: hdk::ValidationData| {
+                    Ok(())
+                })
+            ]
     )
 }
 
