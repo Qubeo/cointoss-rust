@@ -13,16 +13,6 @@ use crate::toss::{ TossSchema, SeedSchema, TossResultSchema, TossOutcome, Result
 use crate::messaging::{ MsgType, TossResponseMsg, GeneralMsg, RequestMsg };
 use crate::messaging::{ process_general_msg, process_request_msg, process_toss_response_msg };
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct GetLinksLoadElement<T> {
-	pub address: HashString,
-	pub entry: T
-}
-
-pub type GetLinksLoadResult<T> = Vec<GetLinksLoadElement<T>>;
-
-ZomeApiResult<utils::GetLinksLoadResult<Event>>
-
 
 // @ ----------------------------------------------------------------------------------------------
 // @ Sends the request via P2P messaging
@@ -119,22 +109,46 @@ pub fn reveal_outcome(outcome_revealed_addr: Address) -> ZomeApiResult<ResultAnd
     hdk::utils::get_as_type::<ResultAndRevealedSchema>(outcome_revealed_addr)
 }
 
+// !!! TODO: Ta adresa jako parametr je teď nerelevantní, ne?
 pub fn handle_reveal_toss_result(toss_result_addr: Address) -> ZomeApiResult<TossResultSchema> {
     let toss_result_str = "toss_result";
     let _debug_res = hdk::debug(format!("HCH/ reveal_toss_result(): toss_result_addr: {}", toss_result_addr.clone()));
     // let get_result = hdk::utils::get_as_type::<TossResultSchema>(toss_result_addr.clone());
 
     // Q: Why need to specify the S: String type parameter? How is the "toss_result" entry type relevant - why not needed here?
-    let get_result = hdk::get_links_and_load(&AGENT_ADDRESS, "toss_results").unwrap();
+    // let get_result = hdk::get_links_and_load(&AGENT_ADDRESS, "toss_results").unwrap();
+
+    // ERR: creates a temporary which is freed while still in use
+    // let get_result = hdk::get_links(&AGENT_ADDRESS, "toss_results")?.addresses();
+    let get_result = hdk::get_links(&AGENT_ADDRESS, "toss_results"); //.addresses();
+
     // let get_result = hdk::utils::get_links_and_load_type::<String, TossResultSchema>(&AGENT_ADDRESS.to_string().into(), "toss_results".to_string()).unwrap();
-    let _debug_res = hdk::debug(format!("HCH/ reveal_toss_result(): {:?}", get_result.clone()));
+    let _debug_res = hdk::debug(format!("HCH/ reveal_toss_result(): {:?}", get_result)); //.clone()));
 
     // Q: Is the index 0 the right index (cause stack) or not (cause queue)?
     // Q: What exactly am I cloning / should I be cloning / should be cloning at all, vs. borrow / reference?
-    let element_addr = get_result[0].clone().unwrap().address();
-    let got_element = hdk::utils::get_as_type::<TossResultSchema>(element_addr);
+    // let element_addr = get_result[0].clone(); //.unwrap().address();
+    // let got_element = hdk::utils::get_as_type::<TossResultSchema>(element_addr);
 
-    Ok(got_element.unwrap())
+    let tmp_result_schema = get_dummy_toss_result();
+
+    Ok(tmp_result_schema)
+    //Ok(AGENT_ADDRESS.into()) // got_element.unwrap())
+}
+
+pub fn get_dummy_toss_result() -> TossResultSchema {
+    let toss_result_addr: Address = AGENT_ADDRESS.to_string().into();
+    TossResultSchema {
+        outcome: TossOutcome::InitiatorWon,
+        time_stamp: "prdel".to_string(),
+        toss: TossSchema {
+            call: 1,
+            initiator: toss_result_addr.clone(),
+            initiator_seed_hash: toss_result_addr.clone(),
+            responder: toss_result_addr.clone(),
+            responder_seed_hash: toss_result_addr        
+        }
+    }
 }
 
 pub fn generate_random_seedval() -> u8 {
@@ -353,6 +367,9 @@ fn receive_toss_response(toss_response: TossResponseMsg) -> ZomeApiResult<Addres
     let toss_result_entry = Entry::App("toss_result".into(), toss_result.into());
     let toss_result_address = hdk::commit_entry(&toss_result_entry);
     let _link_res = hdk::link_entries(&AGENT_ADDRESS, &toss_result_address.clone().unwrap(), "toss_results");
+
+    let get_result = hdk::get_links_and_load(&AGENT_ADDRESS, "toss_results").unwrap();
+    let _debug_res = hdk::debug(format!("HCH/ receive_toss_response(): get linking result: {:?}", get_result));
 
     // Ok(outcome_and_revealed)
     toss_result_address

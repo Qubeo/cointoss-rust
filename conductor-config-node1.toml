@@ -14,7 +14,7 @@ key_file = "keys/alice.key"
 
 [[dnas]]
 id = "cointoss_dna"
-file = "dna/cointoss.hcpkg"
+file = "dist/cointoss-rust.dna.json"
 hash = "Qm328wyq38924y"
 # Q: Where do I get this?
 
