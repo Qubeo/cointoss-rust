@@ -33,6 +33,15 @@ pub fn handle_send_request(agent_to: Address, seed_hash: HashString) -> ZomeApiR
 // @
 // Q: Design patterns - how to break those apart, decompose cleanly, idiomatically?
 //      Perhaps use closures / callback, instead of calling function from another module?
+
+pub fn process_received_message(payload: String) -> ZomeApiResult<String> {
+
+     Ok(json!({
+           "key": "value"
+       }).to_string())
+}
+
+/*
 pub fn process_received_message(payload: String) -> ZomeApiResult<String> {
         
        let msg: GeneralMsg = process_general_msg(payload);      
@@ -58,6 +67,7 @@ pub fn process_received_message(payload: String) -> ZomeApiResult<String> {
             _ => Ok("process_received_message(): [other message type received]".to_string())
         }
 }
+*/
 
 
 // TODO: Fix the documentation format.

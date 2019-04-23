@@ -59,11 +59,11 @@ pub fn seed_definition() -> ValidatingEntryType {
         name: "seed",
         description: "",
         sharing: Sharing::Private,
-        native_type: SeedSchema, 
+        // native_type: SeedSchema, 
         validation_package: || {
             hdk::ValidationPackageDefinition::Entry
         },
-        validation: |_seed: SeedSchema, _validation_data: hdk::ValidationData| { Ok(()) },
+        validation: |_validation_data: hdk::EntryValidationData<SeedSchema>| { Ok(()) },
         links: [
             from!(
                 "%agent_id",
@@ -71,7 +71,7 @@ pub fn seed_definition() -> ValidatingEntryType {
                 validation_package: || {
                     hdk::ValidationPackageDefinition::ChainFull
                 },
-                validation: |_source: Address, _target: Address, _validation_data: hdk::ValidationData| {
+                validation: |_validation_data: hdk::LinkValidationData| {
                     Ok(())
                 })
             ]
@@ -83,11 +83,11 @@ pub fn toss_definition() -> ValidatingEntryType {
         name: "toss",    // Learning: Experimenting with "enum" instead of hardcoded string
         description: "",
         sharing: Sharing::Public,
-        native_type: TossSchema, // Q: Or? Json? JsonString?
+        // native_type: TossSchema, // Q: Or? Json? JsonString?
         validation_package: || { 
             hdk::ValidationPackageDefinition::Entry
         },
-        validation: |_toss: TossSchema, _validation_data: hdk::ValidationData| { Ok(()) }
+        validation: |_validation_data: hdk::EntryValidationData<TossSchema>| { Ok(()) }
     )
 }
 
@@ -96,11 +96,11 @@ pub fn toss_result_definition() -> ValidatingEntryType {
         name: "toss_result",
         description: "",
         sharing: Sharing::Public,
-        native_type: TossResultSchema, // Q: Or?
+        // native_type: TossResultSchema, // Q: Or?
         validation_package: || { 
             hdk::ValidationPackageDefinition::Entry
         },
-        validation: |_toss_result: TossResultSchema, _validation_data: hdk::ValidationData| { Ok(()) },
+        validation: |_validation_data: hdk::EntryValidationData<TossResultSchema>| { Ok(()) },
         // Q: What exactly is this for? Where and when exactly does it get to operate?
         links: [
             from!(
@@ -109,7 +109,7 @@ pub fn toss_result_definition() -> ValidatingEntryType {
                 validation_package: || {
                     hdk::ValidationPackageDefinition::ChainFull
                 },
-                validation: |_source: Address, _target: Address, _validation_data: hdk::ValidationData| {
+                validation: |_validation_data: hdk::LinkValidationData| {
                     Ok(())
                 })
             ]

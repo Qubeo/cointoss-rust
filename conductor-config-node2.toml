@@ -4,8 +4,8 @@
 [[agents]]
 id = "bob"
 name = "Bob"
-public_address = "HcScI8Rcf6da3Wan9fKkqWwtCgbiitzb9MDV3CeUeXzpr659PO5gO6oFaZ9kuxa"
-key_file = "keys/bob.key"
+public_address = "HcSCJMXIvhU9dopktfiRiX4MYKrwxd3heqg4k6454g3yw5FyFjut96yzKPqne6z"
+keystore_file = "keys/HcSCJMXIvhU9dopktfiRiX4MYKrwxd3heqg4k6454g3yw5FyFjut96yzKPqne6z"
 
 # -----------  DNA  -----------
 

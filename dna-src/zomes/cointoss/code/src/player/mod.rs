@@ -29,13 +29,13 @@ pub fn handle_definition() -> ValidatingEntryType {
         name: "handle",
         description: "",
         sharing: Sharing::Public,
-        native_type: HandleSchema,                                // Q: Why does String, or even JsonString not work any more?
+        // native_type: HandleSchema,                                // Q: Why does String, or even JsonString not work any more?
         
         validation_package: || {
             hdk::ValidationPackageDefinition::Entry
         },
         
-        validation: |_handle: HandleSchema, _validation_data: hdk::ValidationData| { Ok(()) },
+        validation: |_validation_data: hdk::EntryValidationData<HandleSchema>| { Ok(()) },
         
         links: [
             to!(
@@ -43,10 +43,10 @@ pub fn handle_definition() -> ValidatingEntryType {
                 tag: "has_member",
 
                 validation_package: || {
-                    hdk::ValidationPackageDefinition::Entry
+                    hdk::ValidationPackageDefinition::ChainFull
                 },
 
-                validation: |_base: Address, _target: Address, _ctx: hdk::ValidationData| {
+                validation: |_validation_data: hdk::LinkValidationData| {
                     Ok(())
                 }
             ),
@@ -55,10 +55,10 @@ pub fn handle_definition() -> ValidatingEntryType {
                 tag: "member_of",
 
                 validation_package: || {
-                    hdk::ValidationPackageDefinition::Entry
+                    hdk::ValidationPackageDefinition::ChainFull
                 },
 
-                validation: |_base: Address, _target: Address, _ctx: hdk::ValidationData| {
+                validation: |_validation_data: hdk::LinkValidationData| {
                     Ok(())
                 }
             ),
@@ -67,10 +67,10 @@ pub fn handle_definition() -> ValidatingEntryType {
                 tag: "seeds",       // TODO: Distinguish - the same or different to "seeds" (smwh else)?
 
                 validation_package: || {
-                    hdk::ValidationPackageDefinition::Entry
+                    hdk::ValidationPackageDefinition::ChainFull
                 },
 
-                validation: |_base: Address, _target: Address, _ctx: hdk::ValidationData| {
+                validation: |_validation_data: hdk::LinkValidationData| {
                     Ok(())
                 }
             ),
@@ -79,10 +79,10 @@ pub fn handle_definition() -> ValidatingEntryType {
                 tag: "toss_results",       // TODO: Distinguish - the same or different to "seeds" (smwh else)?
 
                 validation_package: || {
-                    hdk::ValidationPackageDefinition::Entry
+                    hdk::ValidationPackageDefinition::ChainFull
                 },
 
-                validation: |_base: Address, _target: Address, _ctx: hdk::ValidationData| {
+                validation: |_validation_data: hdk::LinkValidationData| {
                     Ok(())
                 }
             )
