@@ -164,6 +164,11 @@ define_zome! {
                 inputs: |toss_result_addr: Address|,
                 outputs: |result: ZomeApiResult<toss::TossResultSchema>|,
                 handler: toss::handlers::handle_reveal_toss_result
+            }
+            prdel: {
+                inputs: | |,
+                outputs: |result: ZomeApiResult<String>|,
+                handler: toss::handlers::handle_prdel
             }                       
     ]
     
@@ -183,7 +188,8 @@ define_zome! {
             commit_seed,
             commit_toss,
             send_request,
-            reveal_toss_result
+            reveal_toss_result,
+            prdel
         ]
     }
 }

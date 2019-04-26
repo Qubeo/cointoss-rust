@@ -14,13 +14,48 @@ use crate::messaging::{ MsgType, TossResponseMsg, GeneralMsg, RequestMsg };
 use crate::messaging::{ process_general_msg, process_request_msg, process_toss_response_msg };
 
 
+// TODO: Fix the documentation format. Q: Use "///"?
+/*
+ * Initiates the game by doing the first seed commit and sending the request to the agent through gossip (?)
+ * Step A_01
+ *
+ * @callingType { ZomeApiResult<HashString> }
+ * @exposure { public }
+ * @param { Address } { agent_to }
+ * @param { u8 } { seed_value }
+ * @return { ZomeApiResult<HashString> } 
+ */
+pub fn handle_request_toss(agent_to: Address, seed_value: u8) -> ZomeApiResult<HashString> {     // Q: Misleading name? Cause request over N2N?
+        
+    let _debug_res = hdk::debug("HCH/ #A_01 handle_request_toss()");    
+    let salt = generate_salt();
+
+    handle_prdel();
+    
+    let seed = SeedSchema {
+        salt: salt, // TODO: randomize.
+        seed_value: seed_value  // Q: Randomize or let user enter thru the UI?
+     };
+
+    let seed_addr = handle_commit_seed(seed);
+
+    // Q: Sync chaining vs. async waiting? Fragility vs. composability?
+    // Callback? Future?
+    let _received = handle_send_request(agent_to, seed_addr.clone().unwrap());
+
+    let _debug_res = hdk::debug(format!("HCH/ handle_request_toss(): received: {:?}", _received));
+    
+    // TODO: What to return here, ideally?
+    seed_addr
+}
+
 // @ ----------------------------------------------------------------------------------------------
 // @ Sends the request via P2P messaging
-// @
+// @ STEP A_02
 pub fn handle_send_request(agent_to: Address, seed_hash: HashString) -> ZomeApiResult<String> {
     
     // !!! TODO: It seems AGENT_ADDRESS.to_string() works here. Unlike at other places (Bob? Callback?). How come? Hash vs. Address field perhaps?
-    let _debug_res = hdk::debug("HCH/ handle_send_request():");
+    let _debug_res = hdk::debug("HCH/ #A_02 handle_send_request():");
     let _debug_res = hdk::debug(format!("HCH/ handle_send_request(): AGENT_ADDRESS.to_string(): {:?}", AGENT_ADDRESS.to_string()));
 
     let msg: RequestMsg = RequestMsg { agent_from: AGENT_ADDRESS.to_string().into(), seed_hash: seed_hash };    
@@ -46,71 +81,102 @@ pub fn handle_send_request(agent_to: Address, seed_hash: HashString) -> ZomeApiR
 
 pub fn process_received_message(payload: String) -> ZomeApiResult<String> {
         
-       let msg: GeneralMsg = process_general_msg(payload);      
-       let _debug_res = hdk::debug(format!("HCH/ received_message(): msg: {:?}", msg.clone()));
+    let msg: GeneralMsg = process_general_msg(payload);      
+    let _debug_res = hdk::debug(format!("HCH/ #B_01 received_message(): msg: {:?}", msg.clone()));
 
-        // Parse the message type and choose the appropriate response--------------------------
-        let result = match msg.message_type {
-            // Toss request received -------------------------------------------------------
-            MsgType::RequestToss => {
-                let request_msg = process_request_msg(msg.message);     
-                let _debug_res = hdk::debug(format!("HCH/ received_message(): RequestToss: request_msg: {:?}", request_msg.clone()));
+    // Parse the message type and choose the appropriate response--------------------------
+    let result = match msg.message_type {
+        // Toss request received -------------------------------------------------------
+        MsgType::RequestToss => {
+            let request_msg = process_request_msg(msg.message);     
+            let _debug_res = hdk::debug(format!("HCH/ received_message(): RequestToss: request_msg: {:?}", request_msg.clone()));
                 
-                // !!! TODO: Here prolly a string escaping error? Breaking change in 0.0.11?
-                let receive_request_result = handle_receive_request(request_msg).unwrap(); //.expect("Error receiving request."); // TODO: Fix the error handling. What exactly should this return? Should the unwrap be there?
-                let _debug_res = hdk::debug(format!("HCH/ received_message(): RequestToss: receive_request_result: {:?}", receive_request_result.clone()));
-                Ok(json!(receive_request_result).to_string())
-            },
-            // Response after the other party commited the toss ----------------------------
-            MsgType::TossResponse => {
-                let toss_response = process_toss_response_msg(msg.message);
-                // TODO: Better naming. handle_toss_response? But, potentially confusing "handle".
-                let result = receive_toss_response(toss_response);
+            // !!! TODO: Here prolly a string escaping error? Breaking change in 0.0.11?
+            let receive_request_result = handle_receive_request(request_msg).unwrap(); //.expect("Error receiving request."); // TODO: Fix the error handling. What exactly should this return? Should the unwrap be there?
+            let _debug_res = hdk::debug(format!("HCH/ received_message(): RequestToss: receive_request_result: {:?}", receive_request_result.clone()));
+            Ok(json!(receive_request_result).to_string())
+        },
+        // Response after the other party commited the toss ----------------------------
+        MsgType::TossResponse => {
+            let toss_response = process_toss_response_msg(msg.message);
+            // TODO: Better naming. handle_toss_response? But, potentially confusing "handle".
+            let result = receive_toss_response(toss_response);
 
-                // handle_commit_toss()
-                Ok(json!(result).to_string())
-            }
-            // Other message type received -------------------------------------------------
-            _ => Ok("process_received_message(): [other message type received]".to_string())
-        };
+             // handle_commit_toss()
+            Ok(json!(result).to_string())
+        }
+        // Other message type received -------------------------------------------------
+        _ => Ok("process_received_message(): [other message type received]".to_string())
+    };
 
-        let _debug_res = hdk::debug(format!("HCH/ received_message(): result: {:?}", result.clone()));
+    let _debug_res = hdk::debug(format!("HCH/ received_message(): result: {:?}", result.clone()));
 
-        result
+    result
 }
 
 
+pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
 
-// TODO: Fix the documentation format.
-/*
- * Initiates the game by doing the first seed commit and sending the request to the agent through gossip (?)
- *
- * @callingType { ZomeApiResult<HashString> }
- * @exposure { public }
- * @param { Address } { agent_to }
- * @param { u8 } { seed_value }
- * @return { ZomeApiResult<HashString> } 
- */
-pub fn handle_request_toss(agent_to: Address, seed_value: u8) -> ZomeApiResult<HashString> {     // Q: Misleading name? Cause request over N2N?
-        
-    let salt = generate_salt();
+    // Commit seed
+    //let _debug_res = hdk::debug(format!("HCH/ handle_receive_request(): request: {:?}", request.clone()));
+
+    let my_seed = generate_seed("saltpr".to_string());    
+    let _debug_res = hdk::debug(format!("HCH/ handle_receive_request(): my_seed: {:?}", my_seed.clone()));
+
+    let my_seed_hash = handle_commit_seed(my_seed.clone()).unwrap();        // Q: Better use HashString or Address? (Idiomatic Holochain :) )
     
-    let seed = SeedSchema {
-        salt: salt, // TODO: randomize.
-        seed_value: seed_value  // Q: Randomize or let user enter thru the UI?
-     };
+    let _debug_res = hdk::debug(format!("HCH/ handle_receive_request(): seed_value: {}", &my_seed.seed_value));
 
-    let seed_addr = handle_commit_seed(seed);
-
-    // Q: Sync chaining vs. async waiting? Fragility vs. composability?
-    // Callback? Future?
-    let _received = handle_send_request(agent_to, seed_addr.clone().unwrap());
-
-    let _debug_res = hdk::debug(format!("HCH/ handle_request_toss(): received: {:?}", _received));
+/*    let toss = TossSchema {
+        initiator: request.agent_from.clone(),
+        initiator_seed_hash: request.seed_hash.clone(),
+        responder: Address::from(AGENT_ADDRESS.to_string()), // Q: Why can't just use the AGENT_ADDRESS?
+        responder_seed_hash: my_seed_hash,
+        call: (generate_pseudo_random() % 2) as u8     // TODO: Randomize
+    }; */
     
-    // TODO: What to return here, ideally?
-    seed_addr
+    let toss = TossSchema {
+        initiator: "HcScjwO9ji9633ZYxa6IYubHJHW6ctfoufv5eq4F7ZOxay8wR76FP4xeG9pY3ui".to_string().into(),
+        initiator_seed_hash: "HcScjwO9ji9633ZYxa6IYubHJHW6ctfoufv5eq4F7ZOxay8wR76FP4xeG9pY3ui".to_string().into(),
+        responder: "HcScjwO9ji9633ZYxa6IYubHJHW6ctfoufv5eq4F7ZOxay8wR76FP4xeG9pY3ui".to_string().into(), // Q: Why can't just use the AGENT_ADDRESS?
+        responder_seed_hash: "HcScjwO9ji9633ZYxa6IYubHJHW6ctfoufv5eq4F7ZOxay8wR76FP4xeG9pY3ui".to_string().into(),
+        call: 1     // TODO: Randomize
+    };
+
+    let _debug_res = hdk::debug(format!("HCH/ handle_receive_request(): toss: {:?}", toss.clone()));
+
+    // Commit toss
+    let toss_entry = handle_commit_toss(toss.clone());
+
+    let _debug_res = hdk::debug(format!("handle_receive_request(): toss_entry: {}", toss_entry.clone().unwrap()));
+
+    // Send call / response triplet - responder_seed, toss_hash, call
+    // Q: Decomposition. Should be called from here or from some "central" function?
+    // Q: Am I, as B, already revealing the seed here? Should I?
+    /* let response_msg = TossResponseMsg {
+        agent_from: //AGENT_ADDRESS.to_string().into(),
+        responder_seed: my_seed.clone(),                                
+        toss_hash: toss_entry.clone().unwrap(),
+        call: 1     // TODO: Randomize or let the call be entered otherwise.
+    }; */
+
+    let response_msg = TossResponseMsg {
+        agent_from: "HcScjwO9ji9633ZYxa6IYubHJHW6ctfoufv5eq4F7ZOxay8wR76FP4xeG9pY3ui".to_string().into(),//AGENT_ADDRESS.to_string().into(),
+        responder_seed: my_seed.clone(), //"HcScjwO9ji9633ZYxa6IYubHJHW6ctfoufv5eq4F7ZOxay8wR76FP4xeG9pY3ui".to_string().into(),                                
+        toss_hash: "HcScjwO9ji9633ZYxa6IYubHJHW6ctfoufv5eq4F7ZOxay8wR76FP4xeG9pY3ui".to_string().into(),
+        call: 1     // TODO: Randomize or let the call be entered otherwise.
+    };
+
+    let send_result = send_response(toss.initiator.clone(), response_msg);
+    
+    let _debug_res = hdk::debug(format!("handle_receive_request(): send_response result: {:?}", send_result.unwrap()));
+    // Q: Receiving {Ok: {Ok: ___ }} construction. How come? Wrapping?
+
+    // Q: What now here?
+    toss_entry
 }
+
+
 
 // TODO: Try making it interactive, pulling it from th UI instead? Or getting it somewhere else "outside"?
 // Q: Should all this be public?
@@ -130,47 +196,7 @@ pub fn reveal_outcome(outcome_revealed_addr: Address) -> ZomeApiResult<ResultAnd
     hdk::utils::get_as_type::<ResultAndRevealedSchema>(outcome_revealed_addr)
 }
 
-// !!! TODO: Ta adresa jako parametr je teď nerelevantní, ne?
-pub fn handle_reveal_toss_result(toss_result_addr: Address) -> ZomeApiResult<TossResultSchema> {
-    let toss_result_str = "toss_result";
-    let _debug_res = hdk::debug(format!("HCH/ reveal_toss_result(): toss_result_addr: {}", toss_result_addr.clone()));
-    // let get_result = hdk::utils::get_as_type::<TossResultSchema>(toss_result_addr.clone());
 
-    // Q: Why need to specify the S: String type parameter? How is the "toss_result" entry type relevant - why not needed here?
-    // let get_result = hdk::get_links_and_load(&AGENT_ADDRESS, "toss_results").unwrap();
-
-    // ERR: creates a temporary which is freed while still in use
-    // let get_result = hdk::get_links(&AGENT_ADDRESS, "toss_results")?.addresses();
-    let get_result = hdk::get_links(&AGENT_ADDRESS, "toss_results"); //.addresses();
-
-    // let get_result = hdk::utils::get_links_and_load_type::<String, TossResultSchema>(&AGENT_ADDRESS.to_string().into(), "toss_results".to_string()).unwrap();
-    let _debug_res = hdk::debug(format!("HCH/ reveal_toss_result(): {:?}", get_result)); //.clone()));
-
-    // Q: Is the index 0 the right index (cause stack) or not (cause queue)?
-    // Q: What exactly am I cloning / should I be cloning / should be cloning at all, vs. borrow / reference?
-    // let element_addr = get_result[0].clone(); //.unwrap().address();
-    // let got_element = hdk::utils::get_as_type::<TossResultSchema>(element_addr);
-
-    let tmp_result_schema = get_dummy_toss_result();
-
-    Ok(tmp_result_schema)
-    //Ok(AGENT_ADDRESS.into()) // got_element.unwrap())
-}
-
-pub fn get_dummy_toss_result() -> TossResultSchema {
-    let toss_result_addr: Address = AGENT_ADDRESS.to_string().into();
-    TossResultSchema {
-        outcome: TossOutcome::InitiatorWon,
-        time_stamp: "prdel".to_string(),
-        toss: TossSchema {
-            call: 1,
-            initiator: toss_result_addr.clone(),
-            initiator_seed_hash: toss_result_addr.clone(),
-            responder: toss_result_addr.clone(),
-            responder_seed_hash: toss_result_addr        
-        }
-    }
-}
 
 pub fn generate_random_seedval() -> u8 {
     (generate_pseudo_random() % 9) as u8
@@ -294,66 +320,9 @@ pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
 }
 */
 
-
-pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
-
-    // Commit seed
-    //let _debug_res = hdk::debug(format!("HCH/ handle_receive_request(): request: {:?}", request.clone()));
-
-    let my_seed = generate_seed("saltpr".to_string());    
-    let _debug_res = hdk::debug(format!("HCH/ handle_receive_request(): my_seed: {:?}", my_seed.clone()));
-
-    let my_seed_hash = handle_commit_seed(my_seed.clone()).unwrap();        // Q: Better use HashString or Address? (Idiomatic Holochain :) )
-    
-    let _debug_res = hdk::debug(format!("HCH/ handle_receive_request(): seed_value: {}", &my_seed.seed_value));
-
-/*    let toss = TossSchema {
-        initiator: request.agent_from.clone(),
-        initiator_seed_hash: request.seed_hash.clone(),
-        responder: Address::from(AGENT_ADDRESS.to_string()), // Q: Why can't just use the AGENT_ADDRESS?
-        responder_seed_hash: my_seed_hash,
-        call: (generate_pseudo_random() % 2) as u8     // TODO: Randomize
-    }; */
-    
-    let toss = TossSchema {
-        initiator: "HcScjwO9ji9633ZYxa6IYubHJHW6ctfoufv5eq4F7ZOxay8wR76FP4xeG9pY3ui".to_string().into(),
-        initiator_seed_hash: "HcScjwO9ji9633ZYxa6IYubHJHW6ctfoufv5eq4F7ZOxay8wR76FP4xeG9pY3ui".to_string().into(),
-        responder: "HcScjwO9ji9633ZYxa6IYubHJHW6ctfoufv5eq4F7ZOxay8wR76FP4xeG9pY3ui".to_string().into(), // Q: Why can't just use the AGENT_ADDRESS?
-        responder_seed_hash: "HcScjwO9ji9633ZYxa6IYubHJHW6ctfoufv5eq4F7ZOxay8wR76FP4xeG9pY3ui".to_string().into(),
-        call: 1     // TODO: Randomize
-    };
-
-    let _debug_res = hdk::debug(format!("HCH/ handle_receive_request(): toss: {:?}", toss.clone()));
-
-    // Commit toss
-    let toss_entry = handle_commit_toss(toss.clone());
-
-    let _debug_res = hdk::debug(format!("handle_receive_request(): toss_entry: {}", toss_entry.clone().unwrap()));
-
-    // Send call / response triplet - responder_seed, toss_hash, call
-    // Q: Decomposition. Should be called from here or from some "central" function?
-    // Q: Am I, as B, already revealing the seed here? Should I?
-    /* let response_msg = TossResponseMsg {
-        agent_from: //AGENT_ADDRESS.to_string().into(),
-        responder_seed: my_seed.clone(),                                
-        toss_hash: toss_entry.clone().unwrap(),
-        call: 1     // TODO: Randomize or let the call be entered otherwise.
-    }; */
-
-    let response_msg = TossResponseMsg {
-        agent_from: "HcScjwO9ji9633ZYxa6IYubHJHW6ctfoufv5eq4F7ZOxay8wR76FP4xeG9pY3ui".to_string().into(),//AGENT_ADDRESS.to_string().into(),
-        responder_seed: my_seed.clone(), //"HcScjwO9ji9633ZYxa6IYubHJHW6ctfoufv5eq4F7ZOxay8wR76FP4xeG9pY3ui".to_string().into(),                                
-        toss_hash: "HcScjwO9ji9633ZYxa6IYubHJHW6ctfoufv5eq4F7ZOxay8wR76FP4xeG9pY3ui".to_string().into(),
-        call: 1     // TODO: Randomize or let the call be entered otherwise.
-    };
-
-    let send_result = send_response(toss.initiator.clone(), response_msg);
-    
-    let _debug_res = hdk::debug(format!("handle_receive_request(): send_response result: {:?}", send_result.unwrap()));
-    // Q: Receiving {Ok: {Ok: ___ }} construction. How come? Wrapping?
-
-    // Q: What now here?
-    toss_entry
+pub fn handle_prdel() -> ZomeApiResult<String> {
+    let res_dbg = hdk::debug(format!("HCH/ handle_prdel(): AGENT_ADDRESS.to_string(), {:?}", AGENT_ADDRESS.to_string()));
+    Ok("prdel".to_string())
 }
 
 // TODO: Write down the lesson learnt from this bug explicitly into learning.md.
@@ -448,6 +417,48 @@ fn receive_toss_response(toss_response: TossResponseMsg) -> ZomeApiResult<Addres
 
 }
 
+// !!! TODO: Ta adresa jako parametr je teď nerelevantní, ne?
+pub fn handle_reveal_toss_result(toss_result_addr: Address) -> ZomeApiResult<TossResultSchema> {
+    let toss_result_str = "toss_result";
+    let _debug_res = hdk::debug(format!("HCH/ reveal_toss_result(): toss_result_addr: {}", toss_result_addr.clone()));
+    // let get_result = hdk::utils::get_as_type::<TossResultSchema>(toss_result_addr.clone());
+
+    // Q: Why need to specify the S: String type parameter? How is the "toss_result" entry type relevant - why not needed here?
+    // let get_result = hdk::get_links_and_load(&AGENT_ADDRESS, "toss_results").unwrap();
+
+    // ERR: creates a temporary which is freed while still in use
+    // let get_result = hdk::get_links(&AGENT_ADDRESS, "toss_results")?.addresses();
+    let get_result = hdk::get_links(&AGENT_ADDRESS, "toss_results"); //.addresses();
+
+    // let get_result = hdk::utils::get_links_and_load_type::<String, TossResultSchema>(&AGENT_ADDRESS.to_string().into(), "toss_results".to_string()).unwrap();
+    let _debug_res = hdk::debug(format!("HCH/ reveal_toss_result(): {:?}", get_result)); //.clone()));
+
+    // Q: Is the index 0 the right index (cause stack) or not (cause queue)?
+    // Q: What exactly am I cloning / should I be cloning / should be cloning at all, vs. borrow / reference?
+    // let element_addr = get_result[0].clone(); //.unwrap().address();
+    // let got_element = hdk::utils::get_as_type::<TossResultSchema>(element_addr);
+
+    let tmp_result_schema = get_dummy_toss_result();
+
+    Ok(tmp_result_schema)
+    //Ok(AGENT_ADDRESS.into()) // got_element.unwrap())
+}
+
+pub fn get_dummy_toss_result() -> TossResultSchema {
+    let toss_result_addr: Address = AGENT_ADDRESS.to_string().into();
+    TossResultSchema {
+        outcome: TossOutcome::InitiatorWon,
+        time_stamp: "prdel".to_string(),
+        toss: TossSchema {
+            call: 1,
+            initiator: toss_result_addr.clone(),
+            initiator_seed_hash: toss_result_addr.clone(),
+            responder: toss_result_addr.clone(),
+            responder_seed_hash: toss_result_addr        
+        }
+    }
+}
+
 // TODO: Somehow distinguish which functions can be called by what "role"?
 // I.e. when I'm an initiator, I'm inhabiting the "initiator" role, hence such capabilities?
 
@@ -473,8 +484,6 @@ fn evaluate_winner_and_reveal(toss_response: TossResponseMsg) -> (TossOutcome, S
         did_initiator_win);
 
     let _debug_res = hdk::debug(result_formatted);
-
-
 
     (did_initiator_win, my_seed)
 }
