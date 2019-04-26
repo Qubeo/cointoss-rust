@@ -19,7 +19,10 @@ use crate::messaging::{ process_general_msg, process_request_msg, process_toss_r
 // @
 pub fn handle_send_request(agent_to: Address, seed_hash: HashString) -> ZomeApiResult<String> {
     
+    // !!! TODO: It seems AGENT_ADDRESS.to_string() works here. Unlike at other places (Bob? Callback?). How come? Hash vs. Address field perhaps?
     let _debug_res = hdk::debug("HCH/ handle_send_request():");
+    let _debug_res = hdk::debug(format!("HCH/ handle_send_request(): AGENT_ADDRESS.to_string(): {:?}", AGENT_ADDRESS.to_string()));
+
     let msg: RequestMsg = RequestMsg { agent_from: AGENT_ADDRESS.to_string().into(), seed_hash: seed_hash };    
     let send_msg: GeneralMsg = GeneralMsg { agent_from: AGENT_ADDRESS.to_string().into(), message_type: MsgType::RequestToss, message: json!(msg).to_string() };
     // Q: Is this the right way? Or use JsonString by default?
@@ -190,11 +193,21 @@ pub fn generate_salt() -> String {
 
 pub fn send_response(agent_to: Address, response_msg: TossResponseMsg) -> ZomeApiResult<String> {
    
+   // !!! TODO: It seems the error is somewhere here (too). Either AGENT_ADDRESS or json!, I'd say.
+   // But why / how?? In send_request the AGENT_ADDRESS doesn't do for any trouble? :o
+   // !!! Okay, so AGENT_ADDRESS.to_string() here breaks it. Why? Why not in the "handle_send_request"?
+   // "prdel".to_string() works on the other hand.
+   // Perhaps only Bob? Or?
+    let ag_addr: Address = "HcScjwO9ji9633ZYxa6IYubHJHW6ctfoufv5eq4F7ZOxay8wR76FP4xeG9pY3ui".to_string().into(); //AGENT_ADDRESS.to_string().into();
+    let _dbg_res = hdk::debug(format!("HCH/ send_response: AGENT_ADDRESS.to_string(): {:?}", ag_addr));
+
     let wrapped_msg = GeneralMsg {
-        agent_from: AGENT_ADDRESS.to_string().into(),
+        agent_from: "HcScjwO9ji9633ZYxa6IYubHJHW6ctfoufv5eq4F7ZOxay8wR76FP4xeG9pY3ui".to_string().into(), //AGENT_ADDRESS.to_string().into(),
         message_type: MsgType::TossResponse,
         message: json!(response_msg).to_string()
     };
+
+    let _res_dbg = hdk::debug(format!("HCH/ send_response(): wrapped_msg: {:?}", wrapped_msg.clone()));
 
     let response = hdk::send(agent_to, json!(wrapped_msg).to_string(), 20000.into());
     let _debug_res = hdk::debug(format!("HCH/ send_response(): response: {:?}", response.clone()));
@@ -218,9 +231,9 @@ pub fn handle_commit_seed(seed: SeedSchema) -> ZomeApiResult<Address> {
 
     // Q: Naming conventions: seed_address or seed_hash?
     // Q: Borrowing and unwrapping - what's the operator priorities?
-    let link_res = hdk::link_entries(&AGENT_ADDRESS, &seed_address.clone().unwrap(), "seeds");
+    // let link_res = hdk::link_entries(&AGENT_ADDRESS, &seed_address.clone().unwrap(), "seeds");
 
-    let _res_dbg = hdk::debug(format!("HCH/ handle_commit_seed(): link_res: {:?}", link_res.clone()));
+    // let _res_dbg = hdk::debug(format!("HCH/ handle_commit_seed(): link_res: {:?}", link_res.clone()));
 
     seed_address
     // Q: What about multiple plays?
@@ -260,8 +273,12 @@ pub fn handle_commit_toss(toss: TossSchema) -> ZomeApiResult<Address> {
     // TODO: Validate it the toss has the right format etc.?
     // Consider tying it with the validation logic somehow?
 
+    let _res_dbg = hdk::debug(format!("HCH/ handle_commit_toss(): toss: {:?}", toss.clone()));
+
     let toss_entry = Entry::App("toss".into(), toss.into());
     let toss_address_result = hdk::commit_entry(&toss_entry);
+
+    let _res_dbg = hdk::debug(format!("HCH/ handle_commit_toss(): toss_address_result: {:?}", toss_address_result.clone()));
     toss_address_result
 
     // TODO: Add to toss history.
@@ -290,14 +307,24 @@ pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
     
     let _debug_res = hdk::debug(format!("HCH/ handle_receive_request(): seed_value: {}", &my_seed.seed_value));
 
-    let toss = TossSchema {
+/*    let toss = TossSchema {
         initiator: request.agent_from.clone(),
         initiator_seed_hash: request.seed_hash.clone(),
         responder: Address::from(AGENT_ADDRESS.to_string()), // Q: Why can't just use the AGENT_ADDRESS?
         responder_seed_hash: my_seed_hash,
         call: (generate_pseudo_random() % 2) as u8     // TODO: Randomize
-    };
+    }; */
     
+    let toss = TossSchema {
+        initiator: "HcScjwO9ji9633ZYxa6IYubHJHW6ctfoufv5eq4F7ZOxay8wR76FP4xeG9pY3ui".to_string().into(),
+        initiator_seed_hash: "HcScjwO9ji9633ZYxa6IYubHJHW6ctfoufv5eq4F7ZOxay8wR76FP4xeG9pY3ui".to_string().into(),
+        responder: "HcScjwO9ji9633ZYxa6IYubHJHW6ctfoufv5eq4F7ZOxay8wR76FP4xeG9pY3ui".to_string().into(), // Q: Why can't just use the AGENT_ADDRESS?
+        responder_seed_hash: "HcScjwO9ji9633ZYxa6IYubHJHW6ctfoufv5eq4F7ZOxay8wR76FP4xeG9pY3ui".to_string().into(),
+        call: 1     // TODO: Randomize
+    };
+
+    let _debug_res = hdk::debug(format!("HCH/ handle_receive_request(): toss: {:?}", toss.clone()));
+
     // Commit toss
     let toss_entry = handle_commit_toss(toss.clone());
 
@@ -306,10 +333,17 @@ pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
     // Send call / response triplet - responder_seed, toss_hash, call
     // Q: Decomposition. Should be called from here or from some "central" function?
     // Q: Am I, as B, already revealing the seed here? Should I?
-    let response_msg = TossResponseMsg {
-        agent_from: AGENT_ADDRESS.to_string().into(),
+    /* let response_msg = TossResponseMsg {
+        agent_from: //AGENT_ADDRESS.to_string().into(),
         responder_seed: my_seed.clone(),                                
         toss_hash: toss_entry.clone().unwrap(),
+        call: 1     // TODO: Randomize or let the call be entered otherwise.
+    }; */
+
+    let response_msg = TossResponseMsg {
+        agent_from: "HcScjwO9ji9633ZYxa6IYubHJHW6ctfoufv5eq4F7ZOxay8wR76FP4xeG9pY3ui".to_string().into(),//AGENT_ADDRESS.to_string().into(),
+        responder_seed: my_seed.clone(), //"HcScjwO9ji9633ZYxa6IYubHJHW6ctfoufv5eq4F7ZOxay8wR76FP4xeG9pY3ui".to_string().into(),                                
+        toss_hash: "HcScjwO9ji9633ZYxa6IYubHJHW6ctfoufv5eq4F7ZOxay8wR76FP4xeG9pY3ui".to_string().into(),
         call: 1     // TODO: Randomize or let the call be entered otherwise.
     };
 
@@ -331,8 +365,11 @@ fn receive_toss_response(toss_response: TossResponseMsg) -> ZomeApiResult<Addres
     let my_seed_hash = read_my_seed_hash().unwrap();
     let responder_seed_hash = get_seed_hash(toss_response.responder_seed.clone()).unwrap();
 
+    // !!! TODO: Possibly the AGENT_ADDRESS error again? Check. Is it the escaping? RawString? Why in callbacks tho?
+    // Cause if here, then not just Bob.
+    // Could it be it's not ZOME functions? So perhaps they don't have access? Or?
     let toss = TossSchema {
-        initiator: Address::from(AGENT_ADDRESS.to_string()),
+        initiator: Address::from("HcScjwO9ji9633ZYxa6IYubHJHW6ctfoufv5eq4F7ZOxay8wR76FP4xeG9pY3ui".to_string()), //AGENT_ADDRESS.to_string()),
         initiator_seed_hash: my_seed_hash,
         responder: toss_response.agent_from.clone(),
         responder_seed_hash: responder_seed_hash.clone(),
