@@ -58,7 +58,7 @@ pub fn seed_definition() -> ValidatingEntryType {
     entry!(
         name: "seed",
         description: "",
-        sharing: Sharing::Private,
+        sharing: Sharing::Public,
         // native_type: SeedSchema, 
         validation_package: || {
             hdk::ValidationPackageDefinition::Entry

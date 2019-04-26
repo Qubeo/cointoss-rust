@@ -46,7 +46,9 @@ pub struct TossResponseMsg {
 // Q: How to make the deserialization safe?
 // Q: Generalize the processing thru general types <T>?
 pub fn process_request_msg(request: String) -> RequestMsg {
-    let request_msg: RequestMsg = serde_json::from_str(&request).unwrap();
+    let request_msg: RequestMsg = serde_json::from_str(&request).unwrap(); //RequestMsg::try_from(request);
+    let _res_dbg = hdk::debug(format!("HCH/ process_request_msg(): request, request_msg: {}, {:?}", request.clone(), request_msg.clone()));
+
     request_msg
 }
 

@@ -135,7 +135,7 @@ console.log("//************************* Agent B Commit the toss");
 
 // test('Initiate a toss by calling request_toss()', async (t) => {
 //scenario.runTape('Retrieve the toss result', async (t, {alice}) => {
- console.log("//**************** 'Initiate a toss by calling request_toss()'");
+ console.log("//**************** 'Reveal the toss result through reveal_toss_result()'");
 
   // !!! TODO: Beware, misleading naming. It's not a seed has, but a result address (?).
   const toss_outcome_request = { toss_result_addr: g_seed_hash_a };

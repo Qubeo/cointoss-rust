@@ -34,24 +34,28 @@ pub fn handle_send_request(agent_to: Address, seed_hash: HashString) -> ZomeApiR
 // Q: Design patterns - how to break those apart, decompose cleanly, idiomatically?
 //      Perhaps use closures / callback, instead of calling function from another module?
 
-pub fn process_received_message(payload: String) -> ZomeApiResult<String> {
+/* pub fn process_received_message(payload: String) -> ZomeApiResult<String> {
 
      Ok(json!({
            "key": "value"
        }).to_string())
-}
+} */
 
-/*
 pub fn process_received_message(payload: String) -> ZomeApiResult<String> {
         
        let msg: GeneralMsg = process_general_msg(payload);      
+       let _debug_res = hdk::debug(format!("HCH/ received_message(): msg: {:?}", msg.clone()));
 
         // Parse the message type and choose the appropriate response--------------------------
-        match msg.message_type {
+        let result = match msg.message_type {
             // Toss request received -------------------------------------------------------
             MsgType::RequestToss => {
                 let request_msg = process_request_msg(msg.message);     
-                let receive_request_result = handle_receive_request(request_msg).unwrap(); // TODO: Fix the error handling. What exactly should this return? Should the unwrap be there?
+                let _debug_res = hdk::debug(format!("HCH/ received_message(): RequestToss: request_msg: {:?}", request_msg.clone()));
+                
+                // !!! TODO: Here prolly a string escaping error? Breaking change in 0.0.11?
+                let receive_request_result = handle_receive_request(request_msg).unwrap(); //.expect("Error receiving request."); // TODO: Fix the error handling. What exactly should this return? Should the unwrap be there?
+                let _debug_res = hdk::debug(format!("HCH/ received_message(): RequestToss: receive_request_result: {:?}", receive_request_result.clone()));
                 Ok(json!(receive_request_result).to_string())
             },
             // Response after the other party commited the toss ----------------------------
@@ -65,9 +69,13 @@ pub fn process_received_message(payload: String) -> ZomeApiResult<String> {
             }
             // Other message type received -------------------------------------------------
             _ => Ok("process_received_message(): [other message type received]".to_string())
-        }
+        };
+
+        let _debug_res = hdk::debug(format!("HCH/ received_message(): result: {:?}", result.clone()));
+
+        result
 }
-*/
+
 
 
 // TODO: Fix the documentation format.
@@ -204,11 +212,15 @@ pub fn handle_commit_seed(seed: SeedSchema) -> ZomeApiResult<Address> {
     let seed_entry = Entry::App("seed".into(), seed.into());
     let seed_address = hdk::commit_entry(&seed_entry);
 
+    let _res_dbg = hdk::debug(format!("HCH/ handle_commit_seed(): seed_address: {:?}", seed_address.clone()));
+
     // Q: Link it to an anchor? Or?
 
     // Q: Naming conventions: seed_address or seed_hash?
     // Q: Borrowing and unwrapping - what's the operator priorities?
-    let _link_res = hdk::link_entries(&AGENT_ADDRESS, &seed_address.clone().unwrap(), "seeds");
+    let link_res = hdk::link_entries(&AGENT_ADDRESS, &seed_address.clone().unwrap(), "seeds");
+
+    let _res_dbg = hdk::debug(format!("HCH/ handle_commit_seed(): link_res: {:?}", link_res.clone()));
 
     seed_address
     // Q: What about multiple plays?
@@ -258,10 +270,22 @@ pub fn handle_commit_toss(toss: TossSchema) -> ZomeApiResult<Address> {
 
 // TODO: Update the name to reflect the function. Does it really handle just the receiving?
 // @ Returns: ??? Toss entry address?? Or?? Custom error?
+
+/*
+pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
+    Ok("HcScjwO9ji9633ZYxa6IYubHJHW6ctfoufv5eq4F7ZOxay8wR76FP4xeG9pY3ui".to_string().into())
+}
+*/
+
+
 pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
 
     // Commit seed
+    //let _debug_res = hdk::debug(format!("HCH/ handle_receive_request(): request: {:?}", request.clone()));
+
     let my_seed = generate_seed("saltpr".to_string());    
+    let _debug_res = hdk::debug(format!("HCH/ handle_receive_request(): my_seed: {:?}", my_seed.clone()));
+
     let my_seed_hash = handle_commit_seed(my_seed.clone()).unwrap();        // Q: Better use HashString or Address? (Idiomatic Holochain :) )
     
     let _debug_res = hdk::debug(format!("HCH/ handle_receive_request(): seed_value: {}", &my_seed.seed_value));
@@ -291,13 +315,14 @@ pub fn handle_receive_request(request: RequestMsg) -> ZomeApiResult<Address> {
 
     let send_result = send_response(toss.initiator.clone(), response_msg);
     
-    let _debug_res = hdk::debug(format!("handle_receive_request(): send_response result: {}", send_result.unwrap()));
+    let _debug_res = hdk::debug(format!("handle_receive_request(): send_response result: {:?}", send_result.unwrap()));
     // Q: Receiving {Ok: {Ok: ___ }} construction. How come? Wrapping?
 
     // Q: What now here?
     toss_entry
 }
 
+// TODO: Write down the lesson learnt from this bug explicitly into learning.md.
 
 fn receive_toss_response(toss_response: TossResponseMsg) -> ZomeApiResult<Address> {
     

@@ -56,8 +56,8 @@ dna_interface = "websocket_interface"
 # -----------  Networking  -----------
 
 [network]
-n3h_path = "n3h"
-n3h_persistence_path = "./../../"
+# n3h_path = "n3h"
+# n3h_persistence_path = "./../../"
 bootstrap_nodes = []
 
 # -----------  Networking instructions  -----------

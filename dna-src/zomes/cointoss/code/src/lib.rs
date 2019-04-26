@@ -85,6 +85,7 @@ define_zome! {
     receive: |payload| {
         
         toss::handlers::process_received_message(payload).unwrap() // Q: Shoudn't be some kind of async / promise sth? What if blocking?
+        
      }
 
     functions: [
