@@ -1,6 +1,7 @@
 
 use hdk::error::ZomeApiResult;
-use hdk::AGENT_ADDRESS;
+// use hdk::AGENT_ADDRESS;
+use hdk::{AGENT_ADDRESS, AGENT_ID_STR, DNA_NAME, AGENT_INITIAL_HASH, CAPABILITY_REQ, DNA_ADDRESS, PUBLIC_TOKEN};
 use hdk::holochain_core_types::{
     hash::HashString,
     entry::Entry,
@@ -83,6 +84,12 @@ pub fn process_received_message(payload: String) -> ZomeApiResult<String> {
         
     let msg: GeneralMsg = process_general_msg(payload);      
     let _debug_res = hdk::debug(format!("HCH/ #B_01 received_message(): msg: {:?}", msg.clone()));
+
+    let ag_addr = match hdk::AGENT_ADDRESS.to_string() {
+        _ => "Aaa".to_string()
+    };
+
+    let _debug_res = hdk::debug(format!("HCH/ #B_01 received_message(): msg: {:?}", ag_addr));
 
     // Parse the message type and choose the appropriate response--------------------------
     let result = match msg.message_type {
