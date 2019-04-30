@@ -85,7 +85,7 @@ pub fn process_received_message(payload: String) -> ZomeApiResult<String> {
     let msg: GeneralMsg = process_general_msg(payload);      
     let _debug_res = hdk::debug(format!("HCH/ #B_01 received_message(): msg: {:?}", msg.clone()));
 
-    let ag_addr = match hdk::AGENT_ADDRESS.to_string() {
+    let ag_addr = match "prdel".to_string() {
         _ => "Aaa".to_string()
     };
 
