@@ -23,3 +23,4 @@ First I thought it's happening just to Bob, cause in the first send_request it w
 Then I thought it might be just in a callback function.
 That might be se.
 Now I'm going to test out the hypothesis, that it doesn't work in functions, that aren't Zome functions.
+

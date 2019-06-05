@@ -57,6 +57,8 @@ note: Run with `RUST_BACKTRACE=1` environment variable to display a backtrace.
 2019-03-22 17:04:52:conductor: err/conductor: Error running interface 'websocket_interface': Io Error: Normálně je povoleno pouze jedno použití každé adresy (protokolu, síťové adresy, portu) soketu. (os error 10048)"
 But then the N2N communication works. What's wrong?
 
+### Installation related
+When conflicting crate dependencies: cargo update in the "code" directory.
 
 **Misc learnings, notes**
 Setting environment values in PSH: $env:MyTestVariable = "My temporary test variable."

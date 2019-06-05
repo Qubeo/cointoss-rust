@@ -88,7 +88,7 @@ define_zome! {
         //    _ => "Test".to_string()
        // }
         //toss::handlers::process_received_message(payload).unwrap() // Q: Shoudn't be some kind of async / promise sth? What if blocking?
-        hdk::AGENT_ADDRESS.to_string()
+        (*hdk::AGENT_ADDRESS).to_string()
         // "Receive test".to_string()
 
      }
