@@ -36,7 +36,7 @@ pub fn handle_register(name: String) -> ZomeApiResult<Address> {
     //    Or even in genesis of the application - just the first agent?
     // Link the anchor to the new agent under the "member_tag" tag (?)
     let anchor_address = hdk::commit_entry(&anchor_entry);
-    let _link_res = hdk::link_entries(&anchor_address.clone().unwrap(), &AGENT_ADDRESS, "member_tag");
+    let _link_res = hdk::link_entries(&anchor_address.clone().unwrap(), &AGENT_ADDRESS, "member_tag", "");
 
     let handle_entry = Entry::App(
         "handle".into(),
@@ -44,7 +44,7 @@ pub fn handle_register(name: String) -> ZomeApiResult<Address> {
     );
 
     let handle_addr = hdk::commit_entry(&handle_entry);
-    let _link_res = hdk::link_entries(&AGENT_ADDRESS, &handle_addr.clone().unwrap(), "handle");
+    let _link_res = hdk::link_entries(&AGENT_ADDRESS, &handle_addr.clone().unwrap(), "handle", "");
 
     // Q: When leaving the ...)?; syntax, there were problems, the handle_register function didn't return properly... or perhaps returned too soon, IDK
     // TODO: Find what exactly does the "?" do.

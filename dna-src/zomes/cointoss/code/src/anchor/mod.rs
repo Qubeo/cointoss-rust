@@ -25,7 +25,7 @@ pub fn anchor_definition() -> ValidatingEntryType {
         links: [
             to!(
                 "%agent_id",
-                tag: "member_tag",
+                link_type: "member_tag",
 
                 validation_package: || {
                     hdk::ValidationPackageDefinition::ChainFull
@@ -37,7 +37,7 @@ pub fn anchor_definition() -> ValidatingEntryType {
             ),
             to!(
                 "toss",
-                tag: "toss",
+                link_type: "toss",
 
                 validation_package: || {
                     hdk::ValidationPackageDefinition::ChainFull
@@ -49,7 +49,7 @@ pub fn anchor_definition() -> ValidatingEntryType {
             ),
             to!(
                 "seed",
-                tag: "seeds",
+                link_type: "seeds",
 
                 validation_package: || {
                     hdk::ValidationPackageDefinition::ChainFull

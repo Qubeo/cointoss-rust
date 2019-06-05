@@ -82,7 +82,7 @@ define_zome! {
             { Ok(()) }
     }
     
-    receive: |payload| {
+    receive: |from, payload| {
         
         //match hdk::debug(format!("Receive: AGENT_ADDRESS: {:?}", hdk::AGENT_ADDRESS.to_string()) {
         //    _ => "Test".to_string()

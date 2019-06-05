@@ -67,7 +67,7 @@ pub fn seed_definition() -> ValidatingEntryType {
         links: [
             from!(
                 "%agent_id",
-                tag: "agent",
+                link_type: "agent",
                 validation_package: || {
                     hdk::ValidationPackageDefinition::ChainFull
                 },
@@ -105,7 +105,7 @@ pub fn toss_result_definition() -> ValidatingEntryType {
         links: [
             from!(
                 "%agent_id",
-                tag: "agent",
+                link_type: "agent",
                 validation_package: || {
                     hdk::ValidationPackageDefinition::ChainFull
                 },

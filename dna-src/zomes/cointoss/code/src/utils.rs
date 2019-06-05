@@ -20,7 +20,8 @@ pub type GetLinksLoadResult<T> = Vec<GetLinksLoadElement<T>>;
 
 pub fn get_links_and_load<S: Into<String>>(
     base: &HashString,
-    tag: S
+    link_type: Option<S>,
+	tag: Option<S>
 ) -> ZomeApiResult<GetLinksLoadResult<Entry>>  {
 	let get_links_result = hdk::get_links(base, tag)?;
 
@@ -44,7 +45,8 @@ pub fn get_links_and_load_type<
 	R: TryFrom<AppEntryValue>
 >(
     base: &HashString,
-    tag: S
+    link_type: Option<S>,
+	tag: Option<S>
 ) -> ZomeApiResult<GetLinksLoadResult<R>> {
 	let link_load_results = get_links_and_load(base, tag)?;
 

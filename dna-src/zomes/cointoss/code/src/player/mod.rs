@@ -40,7 +40,7 @@ pub fn handle_definition() -> ValidatingEntryType {
         links: [
             to!(
                 "%agent_id",
-                tag: "has_member",
+                link_type: "has_member",
 
                 validation_package: || {
                     hdk::ValidationPackageDefinition::ChainFull
@@ -52,7 +52,7 @@ pub fn handle_definition() -> ValidatingEntryType {
             ),
             from!(
                 "%agent_id",
-                tag: "member_of",
+                link_type: "member_of",
 
                 validation_package: || {
                     hdk::ValidationPackageDefinition::ChainFull
@@ -64,7 +64,7 @@ pub fn handle_definition() -> ValidatingEntryType {
             ),
             to!(
                 "seed",
-                tag: "seeds",       // TODO: Distinguish - the same or different to "seeds" (smwh else)?
+                link_type: "seeds",       // TODO: Distinguish - the same or different to "seeds" (smwh else)?
 
                 validation_package: || {
                     hdk::ValidationPackageDefinition::ChainFull
@@ -76,7 +76,7 @@ pub fn handle_definition() -> ValidatingEntryType {
             ),
             to!(
                 "toss_result",
-                tag: "toss_results",       // TODO: Distinguish - the same or different to "seeds" (smwh else)?
+                link_type: "toss_results",       // TODO: Distinguish - the same or different to "seeds" (smwh else)?
 
                 validation_package: || {
                     hdk::ValidationPackageDefinition::ChainFull

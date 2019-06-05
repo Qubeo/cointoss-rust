@@ -414,9 +414,9 @@ fn receive_toss_response(toss_response: TossResponseMsg) -> ZomeApiResult<Addres
     // Q: Does only one player, the initiator store it? Or?
     let toss_result_entry = Entry::App("toss_result".into(), toss_result.into());
     let toss_result_address = hdk::commit_entry(&toss_result_entry);
-    let _link_res = hdk::link_entries(&AGENT_ADDRESS, &toss_result_address.clone().unwrap(), "toss_results");
+    let _link_res = hdk::link_entries(&AGENT_ADDRESS, &toss_result_address.clone().unwrap(), "toss_results", "");
 
-    let get_result = hdk::get_links_and_load(&AGENT_ADDRESS, "toss_results").unwrap();
+    let get_result = hdk::get_links_and_load(&AGENT_ADDRESS, Some("toss_results".to_string()), None).unwrap();
     let _debug_res = hdk::debug(format!("HCH/ receive_toss_response(): get linking result: {:?}", get_result));
 
     // Ok(outcome_and_revealed)
@@ -435,7 +435,7 @@ pub fn handle_reveal_toss_result(toss_result_addr: Address) -> ZomeApiResult<Tos
 
     // ERR: creates a temporary which is freed while still in use
     // let get_result = hdk::get_links(&AGENT_ADDRESS, "toss_results")?.addresses();
-    let get_result = hdk::get_links(&AGENT_ADDRESS, "toss_results"); //.addresses();
+    let get_result = hdk::get_links(&AGENT_ADDRESS, Some("toss_results".to_string()), None); //.addresses();
 
     // let get_result = hdk::utils::get_links_and_load_type::<String, TossResultSchema>(&AGENT_ADDRESS.to_string().into(), "toss_results".to_string()).unwrap();
     let _debug_res = hdk::debug(format!("HCH/ reveal_toss_result(): {:?}", get_result)); //.clone()));
