@@ -416,6 +416,7 @@ fn receive_toss_response(toss_response: TossResponseMsg) -> ZomeApiResult<Addres
     let toss_result_address = hdk::commit_entry(&toss_result_entry);
     let _link_res = hdk::link_entries(&AGENT_ADDRESS, &toss_result_address.clone().unwrap(), "toss_results", "");
 
+    // Q: Isn't "None" a mistake? Shouldn't be an empty string?
     let get_result = hdk::get_links_and_load(&AGENT_ADDRESS, Some("toss_results".to_string()), None).unwrap();
     let _debug_res = hdk::debug(format!("HCH/ receive_toss_response(): get linking result: {:?}", get_result));
 
